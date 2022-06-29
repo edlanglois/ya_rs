@@ -5,13 +5,25 @@ use animation::SpriteAnimationPlugin;
 
 mod yar;
 
-// Todo:
-// Yar
-// Field
-// Qotile
-// Destroyer
-// Neutral Zone
-// Bullet
+// Plan:
+// Hour 1
+//  - Plan
+//  - Basic app setup.
+//  - Yar idle.
+// Hour 2
+//  - Yar flight w/ anims.
+//  - Yar bullet.
+// Hour 3
+//   - Qotile's Shield
+//   - Eat
+// Hour 4
+//   - Neutral Zone
+// Hour 5
+//   - Qotile
+//   - Destroyer Missile
+// Hour 6
+//   - Swirl
+// ...
 
 pub struct YarsPlugin;
 
