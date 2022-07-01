@@ -28,13 +28,13 @@ Hour 3:
  
 Hour 4:
 - [x] Qotile
-- [x] Fix alpha on sprites.
+- [x] Fix alpha
 - [x] Zorlon Cannon
-- [x] Zorlon Cannon create on Touch Qotile.
+- [x] Collision
+- [x] Zorlon Cannon create on collide Qotile.
 
 Future:
 - [ ] Qotile's Shield
-- [ ] Collision.
 - [ ] Yar eat shield on collide.
 - [ ] Zorlon Cannon create on Eat.
 - [ ] Zorlon Cannon follow Yar.
