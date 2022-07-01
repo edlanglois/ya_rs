@@ -2,10 +2,12 @@ use bevy::prelude::*;
 use bevy::math::const_vec2;
 
 mod yar;
+mod qotile;
 mod bullet;
 mod game_state;
 mod shield;
 mod util;
+mod zorlon_cannon;
 
 // Not really, but close enough for this project.
 // We have no concept of playfield memory and sprite memory so...
@@ -15,32 +17,8 @@ const SCREEN_SCALE: f32 = 4.0;
 const SCREEN_SIZE:Vec2 = const_vec2!([ATARI_RES_X * SCREEN_SCALE, ATARI_RES_Y * SCREEN_SCALE]);
 const SPRITE_SIZE:Vec2 = const_vec2!([16.0, 16.0]);
 
-/*
-// Hour4 -
-    - [ ] Qotile's Shield
-    - [ ] Collision.
-    - [ ] Eat shield on impact.
- */
-
-pub struct YarsPlugin;
-
-pub struct YarShootEvent;
-
-impl Plugin for YarsPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<game_state::GameState>()
-            .add_event::<YarShootEvent>()
-            .add_startup_system(setup_camera)
-            .add_startup_system(setup_sprites)
-            .add_startup_system(yar::setup.after(setup_sprites))
-            .add_startup_system(shield::setup.after(setup_sprites))
-            .add_system(yar::input)
-            .add_system(yar::animate)
-            .add_system(bullet::shoot)
-            .add_system(bullet::fly)
-        ;
-    }
-}
+pub struct ShootBullet;
+pub struct SpawnZorlonCannon;
 
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -73,7 +51,20 @@ pub fn run() {
         })
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_plugins(DefaultPlugins)
-        .add_plugin(YarsPlugin)
+        .init_resource::<game_state::GameState>()
+        .add_event::<ShootBullet>()
+        .add_event::<SpawnZorlonCannon>()
+        .add_startup_system(setup_camera)
+        .add_startup_system(setup_sprites)
+        .add_startup_system(yar::setup.after(setup_sprites))
+        .add_startup_system(shield::setup.after(setup_sprites))
+        .add_startup_system(qotile::setup)
+        .add_system(yar::input)
+        .add_system(yar::animate)
+        .add_system(yar::collide_qotile)
+        .add_system(bullet::shoot)
+        .add_system(bullet::fly)
+        .add_system(zorlon_cannon::spawn)
         .run();
 }
 

@@ -25,34 +25,32 @@ Hour 3:
 - [x] Get screen size and sprite size (roughly) correct relative to 2600.
  
 Hour 4:
+- [x] Qotile
+- [x] Fix alpha on sprites.
+- [x] Zorlon Cannon
+- [x] Zorlon Cannon create on Touch Qotile.
+
+Future:
 - [ ] Qotile's Shield
 - [ ] Collision.
 - [ ] Eat shield on impact.
- 
-Hour 5:
- - [ ] Zorlon Cannon create on Eat.
- - [ ] Zorlon Cannon follow Yar.
- - [ ] Shoot fires Zorlon Cannon.
-
-Hour 6:
- - [ ] Qotile
- - [ ] Qotile moves with Shield.
- - [ ] Destroyer Missile
- 
- Hour 7:
- - [ ] Yar Death
- 
- Unscheduled Tasks:
- - [ ] Neutral Zone
- - [ ] Neutral Zone provides immunity from Destroyer Missile
- - [ ] Swirl
- - [ ] Homing Swirl
- - [ ] Zorlon Cannon kills Qotile & Swirl
- - [ ] Qotile Death
- - [ ] Victory
- - [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
- - [ ] WASM
- - [ ] React Web & Host
- - [ ] Visually wrap Yar when bounds exceed screen Y.
- - [ ] Collision wrap Yar when bounds exceed screen Y.
- - [ ] Scoring / Scoreboard
+- [ ] Eat spawns Zorlon Cannon
+- [ ] Zorlon Cannon create on Eat.
+- [ ] Zorlon Cannon follow Yar.
+- [ ] Shoot fires Zorlon Cannon.
+- [ ] Qotile moves with Shield.
+- [ ] Destroyer Missile
+- [ ] Yar Death
+- [ ] Neutral Zone
+- [ ] Neutral Zone provides immunity from Destroyer Missile
+- [ ] Swirl
+- [ ] Homing Swirl
+- [ ] Zorlon Cannon kills Qotile & Swirl
+- [ ] Qotile Death
+- [ ] Victory
+- [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
+- [ ] WASM
+- [ ] React Web & Host
+- [ ] Visually wrap Yar when bounds exceed screen Y.
+- [ ] Collision wrap Yar when bounds exceed screen Y.
+- [ ] Scoring / Scoreboard

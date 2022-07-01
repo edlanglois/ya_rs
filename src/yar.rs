@@ -7,9 +7,11 @@ use bevy::math::const_vec2;
 // scale
 // eat
 
-use crate::YarShootEvent;
+use crate::{ShootBullet, SpawnZorlonCannon};
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
+use crate::qotile::{Qotile, QOTILE_BOUNDS};
+use crate::util;
 
 const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
 
@@ -60,7 +62,7 @@ pub fn setup(
 
 pub fn input(
     keys: Res<Input<KeyCode>>,
-    mut shoot_event: EventWriter<YarShootEvent>,
+    mut shoot_event: EventWriter<ShootBullet>,
     mut query: Query<(&mut Transform, &mut Yar)>) {
     if query.is_empty() {
         return
@@ -145,7 +147,7 @@ pub fn input(
     }
 
     if keys.pressed( KeyCode::Space) {
-        shoot_event.send(YarShootEvent);
+        shoot_event.send(ShootBullet);
     }
 }
 
@@ -181,5 +183,31 @@ pub fn animate(
         yar.anim_frame = (yar.anim_frame + 1) % anim_length;
 
         sprite.index = sprite_base + yar.anim_frame;
+    }
+}
+
+pub fn collide_qotile(
+    mut spawn_event: EventWriter<SpawnZorlonCannon>,
+    query: Query<(&Transform, Option<&Yar>, Option<&Qotile>,
+    )>,
+) {
+    let mut yar_transform = Transform::identity();
+    let mut qotile_transform = Transform::identity();
+
+    for (transform, yar, qotile) in query.iter() {
+        if yar.is_some() {
+            yar_transform = transform.clone();
+        }
+        if qotile.is_some() {
+            qotile_transform = transform.clone();
+        }
+    }
+
+    if util::intersect_rect(
+        &yar_transform.translation,
+        &YAR_BOUNDS,
+        &qotile_transform.translation,
+        &QOTILE_BOUNDS) {
+        spawn_event.send(SpawnZorlonCannon);
     }
 }

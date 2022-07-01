@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::yar::Yar;
 use crate::yar::YarDirection;
 use crate::game_state::GameState;
-use crate::YarShootEvent;
+use crate::ShootBullet;
 use crate::util::is_offscreen;
 
 #[derive(Component)]
@@ -30,7 +30,7 @@ fn velocity_for_direction( direction: &YarDirection ) -> Vec3 {
 pub fn shoot(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    mut shoot_event: EventReader<YarShootEvent>,
+    mut shoot_event: EventReader<ShootBullet>,
     mut query: Query<(&Transform, &Handle<TextureAtlas>, &Yar)>
 ) {
     if query.is_empty() {
