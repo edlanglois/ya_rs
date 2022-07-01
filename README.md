@@ -33,12 +33,15 @@ Hour 4:
 - [x] Collision
 - [x] Zorlon Cannon create on collide Qotile.
 
+Hour 5:
+- [ ] Zorlon Cannon follow Yar.
+- [ ] Shoot fires Zorlon Cannon.
+
+
 Future:
 - [ ] Qotile's Shield
 - [ ] Yar eat shield on collide.
 - [ ] Zorlon Cannon create on Eat.
-- [ ] Zorlon Cannon follow Yar.
-- [ ] Shoot fires Zorlon Cannon.
 - [ ] Qotile moves with Shield.
 - [ ] Destroyer Missile
 - [ ] Yar Death
@@ -52,6 +55,4 @@ Future:
 - [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
 - [ ] WASM
 - [ ] React Web & Host
-- [ ] Visually wrap Yar when bounds exceed screen Y.
-- [ ] Collision wrap Yar when bounds exceed screen Y.
 - [ ] Scoring / Scoreboard
