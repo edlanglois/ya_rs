@@ -3,14 +3,18 @@ use bevy::prelude::*;
 use crate::yar::Yar;
 use crate::yar::YarDirection;
 use crate::game_state::GameState;
+use crate::YarShootEvent;
+use crate::util::is_offscreen;
 
 #[derive(Component)]
 pub struct Bullet {
     velocity: Vec3,
 }
 
+const BULLET_SPEED: f32 = 6.0;
+
 fn velocity_for_direction( direction: &YarDirection ) -> Vec3 {
-    match direction {
+    let vector = match direction {
         YarDirection::Left => Vec3::new(-1.0,0.0, 1.0),
         YarDirection::Right => Vec3::new(1.0,0.0, 1.0),
         YarDirection::Up => Vec3::new(0.0,1.0, 1.0),
@@ -19,39 +23,56 @@ fn velocity_for_direction( direction: &YarDirection ) -> Vec3 {
         YarDirection::Down => Vec3::new(0.0,-1.0, 1.0),
         YarDirection::DownRight => Vec3::new(1.0,-1.0, 1.0),
         YarDirection::DownLeft => Vec3::new(-1.0,-1.0, 1.0),
-        _ => Vec3::new(1.0, 0.0, 1.0)
-    }
+    };
+    vector * BULLET_SPEED
 }
 
 pub fn shoot(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    keys: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Transform, &Handle<TextureAtlas>, &mut Yar)>
+    mut shoot_event: EventReader<YarShootEvent>,
+    mut query: Query<(&Transform, &Handle<TextureAtlas>, &Yar)>
 ) {
-    if game_state.bullet.is_some() {
-        return;
+    if query.is_empty() {
+        return
     }
 
-    for (mut transform, texture_atlas_handle, mut yar) in query.iter_mut() {
-        if keys.pressed( KeyCode::Space) {
-            game_state.bullet = Some( commands
-                .spawn_bundle(SpriteSheetBundle {
-                    sprite: TextureAtlasSprite {index: 21, ..default()},
-                    texture_atlas: texture_atlas_handle.clone(),
-                    transform: transform.clone(),
-                    ..default()
-                } )
-                .insert(Bullet{velocity: velocity_for_direction(&yar.direction)}).id()
-            );
+    let (transform, texture_atlas_handle, yar) = query.single_mut();
+
+    for _e in shoot_event.iter() {
+        if game_state.bullet.is_some() {
+            return;
         }
+
+        game_state.bullet = Some(commands
+            .spawn_bundle(SpriteSheetBundle {
+                sprite: TextureAtlasSprite { index: 21, ..default() },
+                texture_atlas: texture_atlas_handle.clone(),
+                transform: transform.clone(),
+                ..default()
+            })
+            .insert(Bullet { velocity: velocity_for_direction(&yar.direction) }).id()
+        );
     }
 }
 
+
 pub fn fly(
-    mut query: Query<(&mut Transform, &Bullet)>
+    mut commands: Commands,
+    mut game_state: ResMut<GameState>,
+    mut query: Query<(Entity, &mut Transform, &Bullet)>
 ) {
-    for (mut transform, bullet) in query.iter_mut() {
-        transform.translation += bullet.velocity;
+    if query.is_empty() {
+        return
     }
+
+    let ( e, mut transform, bullet ) = query.single_mut();
+
+    if is_offscreen( transform.translation ) {
+        commands.entity(e).despawn();
+        game_state.bullet = None;
+        return
+    }
+
+    transform.translation += bullet.velocity;
 }

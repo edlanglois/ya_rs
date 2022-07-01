@@ -1,10 +1,17 @@
 use bevy::prelude::*;
+use bevy::math::const_vec2;
 
 // todo:
 // flight
 // shoot
 // scale
 // eat
+
+use crate::YarShootEvent;
+use crate::SCREEN_SIZE;
+use crate::SCREEN_SCALE;
+
+const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
@@ -38,23 +45,13 @@ impl Default for Yar {
 
 pub fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    game_state: Res<crate::game_state::GameState>,
 ) {
-    let texture_handle = asset_server.load("yar_sprites.png");
-    let texture_atlas = TextureAtlas::from_grid_with_padding(
-        texture_handle,
-        Vec2::new(16.0, 16.0),
-        8,
-        3,
-        Vec2::new(2.0, 2.0),
-    );
-
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+//    let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
         .spawn_bundle(SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            transform: Transform::from_scale(Vec3::splat(3.0)),
+            texture_atlas: game_state.sprite_atlas.clone(),
+            transform: Transform::from_scale(Vec3::splat(crate::SCREEN_SCALE)),
             ..default()
         })
         .insert(Yar::default())
@@ -63,11 +60,16 @@ pub fn setup(
 
 pub fn input(
     keys: Res<Input<KeyCode>>,
+    mut shoot_event: EventWriter<YarShootEvent>,
     mut query: Query<(&mut Transform, &mut Yar)>) {
+    if query.is_empty() {
+        return
+    }
+
     let mut yar_delta = Transform::identity();
 
     let speed = 3.0;
-    let mut direction = YarDirection::Up;
+    let mut direction:Option<YarDirection> = None;
 
     if keys.pressed(KeyCode::W) {
         yar_delta.translation.y += speed;
@@ -87,63 +89,97 @@ pub fn input(
 
     if yar_delta.translation.x > 0.0 {
         if yar_delta.translation.y > 0.0 {
-            direction = YarDirection::UpRight;
+            direction = Some(YarDirection::UpRight);
         } else if yar_delta.translation.y < 0.0 {
-            direction = YarDirection::DownRight;
+            direction = Some(YarDirection::DownRight);
         } else {
-            direction = YarDirection::Right;
+            direction = Some(YarDirection::Right);
         }
     } else if yar_delta.translation.x < 0.0 {
         if yar_delta.translation.y > 0.0 {
-            direction = YarDirection::UpLeft;
+            direction = Some(YarDirection::UpLeft);
         } else if yar_delta.translation.y < 0.0 {
-            direction = YarDirection::DownLeft;
+            direction = Some(YarDirection::DownLeft);
         } else {
-            direction = YarDirection::Left;
+            direction = Some(YarDirection::Left);
         }
     } else {
-        if yar_delta.translation.y < 0.0 {
-            direction = YarDirection::Down;
+        if yar_delta.translation.y > 0.0 {
+            direction = Some(YarDirection::Up);
+        } else if yar_delta.translation.y < 0.0 {
+            direction = Some(YarDirection::Down);
         }
     }
 
-    for (mut transform, mut yar) in query.iter_mut() {
-        transform.translation += yar_delta.translation;
-        yar.direction = direction.clone();
+    let (mut transform, mut yar) = query.single_mut();
+
+    // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
+    {
+        let x_pos = transform.translation.x + yar_delta.translation.x;
+
+        let x_underflow = (x_pos - YAR_BOUNDS.x / 2.0) - (-SCREEN_SIZE.x / 2.0);
+        if x_underflow < 0.0 {
+            yar_delta.translation.x -= x_underflow;
+        }
+
+        let x_overflow = (x_pos + YAR_BOUNDS.x / 2.0) - (SCREEN_SIZE.x / 2.0);
+        if x_overflow > 0.0 {
+            yar_delta.translation.x -= x_overflow;
+        }
+    }
+
+    // If Yar's centerpoint moves offscreen in the vertical direction, wrap Yar to the other side.
+    {
+        let y_pos = transform.translation.y + yar_delta.translation.y;
+
+        if y_pos < -SCREEN_SIZE.y / 2.0 {
+            yar_delta.translation.y += SCREEN_SIZE.y;
+        } else if y_pos > SCREEN_SIZE.y / 2.0 {
+            yar_delta.translation.y -= SCREEN_SIZE.y;
+        }
+    }
+
+    transform.translation += yar_delta.translation;
+    if let Some(dir) = direction.clone() {
+        yar.direction = dir;
+    }
+
+    if keys.pressed( KeyCode::Space) {
+        shoot_event.send(YarShootEvent);
     }
 }
 
 pub fn animate(
     time: Res<Time>,
-    texture_atlases: Res<Assets<TextureAtlas>>,
     mut query: Query<(
         &mut AnimationTimer,
         &mut TextureAtlasSprite,
-        &Handle<TextureAtlas>,
         &mut Yar,
     )>,
 ) {
-    for (mut timer, mut sprite, texture_atlas_handle, mut yar) in query.iter_mut() {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            let texture_atlas = texture_atlases.get(texture_atlas_handle).unwrap();
+    if query.is_empty() {
+        return
+    }
 
-            let sprite_base = match yar.direction {
-                YarDirection::Up => 0,
-                YarDirection::UpRight => 2,
-                YarDirection::Right => 4,
-                YarDirection::DownRight => 6,
-                YarDirection::Down => 8,
-                YarDirection::DownLeft => 10,
-                YarDirection::Left => 12,
-                YarDirection::UpLeft => 14,
-            };
+    let (mut timer, mut sprite, mut yar) = query.single_mut();
 
-            let anim_length = 2;
+    timer.tick(time.delta());
+    if timer.just_finished() {
+        let sprite_base = match yar.direction {
+            YarDirection::Up => 0,
+            YarDirection::UpRight => 2,
+            YarDirection::Right => 4,
+            YarDirection::DownRight => 6,
+            YarDirection::Down => 8,
+            YarDirection::DownLeft => 10,
+            YarDirection::Left => 12,
+            YarDirection::UpLeft => 14,
+        };
 
-            yar.anim_frame = (yar.anim_frame + 1) % anim_length;
+        let anim_length = 2;
 
-            sprite.index = sprite_base + yar.anim_frame;
-        }
+        yar.anim_frame = (yar.anim_frame + 1) % anim_length;
+
+        sprite.index = sprite_base + yar.anim_frame;
     }
 }
