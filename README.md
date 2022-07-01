@@ -25,9 +25,9 @@ Hour 3:
 - [x] Get screen size and sprite size (roughly) correct relative to 2600.
  
 Hour 4:
--[ ] Qotile's Shield
--[ ] Collision.
--[ ] Eat shield on impact.
+- [ ] Qotile's Shield
+- [ ] Collision.
+- [ ] Eat shield on impact.
  
 Hour 5:
  - [ ] Zorlon Cannon create on Eat.
