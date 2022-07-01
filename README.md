@@ -5,6 +5,8 @@ Yars' Revenge in Rust
 Just a small rush code project inspired by Tantan.
 Implement Yars' Revenge in <12 hours in Rust.
 
+Learning Bevy & Rust!
+
 Hour 1:
 - [x] Plan
 - [x] Basic app setup.
