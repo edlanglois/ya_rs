@@ -12,7 +12,7 @@ Hour 1:
  
 Hour 2:
  * [x] Yar flight w/ anims.
- + [x] Yar bullet.
+ * [x] Yar bullet.
   
 Hour 3:
  - [ ] Destroy bullet when hit side of screen.
