@@ -35,8 +35,7 @@ Hour 4:
 Future:
 - [ ] Qotile's Shield
 - [ ] Collision.
-- [ ] Eat shield on impact.
-- [ ] Eat spawns Zorlon Cannon
+- [ ] Yar eat shield on collide.
 - [ ] Zorlon Cannon create on Eat.
 - [ ] Zorlon Cannon follow Yar.
 - [ ] Shoot fires Zorlon Cannon.
