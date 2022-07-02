@@ -7,7 +7,7 @@ Implement Yars' Revenge in <12 hours in Rust.
 
 Learning Bevy & Rust!
 
-**12 / 12 Hours Complete!** - [Play it here!](https://brandon-reinhart.github.io/ya_rs/)
+**12 / 12 Hours Complete!** 
 
 Hour 1:
 - [x] Plan
