@@ -1,17 +1,26 @@
 use bevy::prelude::*;
+use bevy::math::const_vec2;
 use crate::yar::{Yar, YarShootEvent};
 use crate::zorlon_cannon::ZorlonCannon;
-use crate::util::is_offscreen;
+use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
+use crate::SCREEN_SCALE;
+use crate::util;
 
 const BULLET_SPEED: f32 = 6.0;
+const BULLET_BOUNDS:Vec2 = const_vec2!([2.0*SCREEN_SCALE, 2.0*SCREEN_SCALE]);
+
+pub struct DespawnBulletEvent;
 
 pub struct BulletPlugin;
 
 impl Plugin for BulletPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_event::<DespawnBulletEvent>()
+            .add_system(despawn)
             .add_system(shoot)
             .add_system(fly)
+            .add_system(collide_shield)
         ;
     }
 }
@@ -19,6 +28,19 @@ impl Plugin for BulletPlugin {
 #[derive(Component)]
 pub struct Bullet {
     velocity: Vec3,
+}
+
+pub fn despawn(
+    mut commands: Commands,
+    mut despawn_event: EventReader<DespawnBulletEvent>,
+    query: Query<Entity, With<Bullet>>
+) {
+    if despawn_event.iter().next().is_none() || query.is_empty() {
+        return;
+    }
+
+    let e = query.single();
+    commands.entity(e).despawn();
 }
 
 pub fn shoot(
@@ -47,18 +69,57 @@ pub fn shoot(
 
 pub fn fly(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Transform, &Bullet)>
+    mut despawn_event: EventWriter<DespawnBulletEvent>,
+    mut query: Query<(&mut Transform, &Bullet)>
 ) {
     if query.is_empty() {
         return
     }
 
-    let ( e, mut transform, bullet ) = query.single_mut();
+    let ( mut transform, bullet ) = query.single_mut();
 
-    if is_offscreen( transform.translation ) {
-        commands.entity(e).despawn();
+    if util::is_offscreen( transform.translation ) {
+        despawn_event.send(DespawnBulletEvent);
         return
     }
 
     transform.translation += bullet.velocity;
+}
+
+pub fn collide_shield(
+    mut despawn_event: EventWriter<DespawnBulletEvent>,
+    mut shield_query: Query<(&Transform, &mut ShieldHealth, &ShieldBlock), Without<Bullet>>,
+    bullet_query: Query<&Transform, (With<Bullet>,Without<ShieldBlock>)>
+) {
+    if shield_query.is_empty() || bullet_query.is_empty() {
+        return
+    }
+
+    let bullet_transform = bullet_query.single();
+
+    let mut struck_block_position = Vec2::default();
+
+    for (shield_transform, _, shield_block) in shield_query.iter_mut() {
+        if util::intersect_rect(
+            &shield_transform.translation,
+            &BULLET_BOUNDS,
+            &bullet_transform.translation,
+            &SHIELD_BLOCK_SPRITE_SIZE) {
+            despawn_event.send(DespawnBulletEvent);
+            struck_block_position = shield_block.position;
+            break
+        }
+    }
+
+    // Bullet kills blocks in a cross shape.
+    for (_, mut shield_health, shield_block) in shield_query.iter_mut() {
+        if shield_block.position == struck_block_position
+            || (shield_block.position+Vec2::new(1.0,0.0)) == struck_block_position
+            || (shield_block.position+Vec2::new(0.0,1.0)) == struck_block_position
+            || (shield_block.position+Vec2::new(-1.0,0.0)) == struck_block_position
+            || (shield_block.position+Vec2::new(0.0,-1.0)) == struck_block_position {
+            shield_health.health -= 5;
+        }
+    }
+
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::math::const_vec2;
-use bevy::ecs::schedule::ShouldRun;
+use rand::prelude::*;
 use std::time::Duration;
 use crate::yar::Yar;
 use crate::util;
@@ -13,6 +13,12 @@ const QOTILE_INSET:f32 = 16.0;
 pub const QOTILE_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 18.0*SCREEN_SCALE]);
 const SWIRL_SPEED: f32 = 6.0;
 
+const SWIRL_DELAY_BASE: f32 = 3.0;
+const SWIRL_DELAY_VARIANCE: f32 = 5.0;
+
+const LAUNCH_DELAY_BASE: f32 = 1.0;
+const LAUNCH_DELAY_VARIANCE: f32 = 3.0;
+
 pub struct QotileDiedEvent;
 pub struct SpawnQotileEvent;
 pub struct DespawnQotileEvent;
@@ -23,12 +29,16 @@ impl Plugin for QotilePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<QotileDiedEvent>()
+            .add_event::<SpawnQotileEvent>()
             .add_event::<DespawnQotileEvent>()
             .add_startup_system(setup)
+            .add_system(spawn)
+            .add_system(despawn)
             .add_system(animate)
             .add_system(timer)
             .add_system(fly)
             .add_system(leave_world)
+            .add_system(died)
         ;
     }
 }
@@ -46,7 +56,7 @@ pub enum QotileAnim {
 
 #[derive(Component)]
 pub struct Qotile {
-    swirl_state: SwirlState,
+    pub swirl_state: SwirlState,
     anim: QotileAnim,
     anim_frame: usize,
     flight_vector: Vec3,
@@ -58,10 +68,29 @@ struct AnimationTimer(pub Timer);
 #[derive(Component, Deref, DerefMut)]
 pub struct SwirlTimer(pub Timer);
 
+fn swirl_delay() -> f32 {
+    SWIRL_DELAY_BASE + SWIRL_DELAY_VARIANCE * thread_rng().gen::<f32>()
+}
+
+fn launch_delay() -> f32 {
+    LAUNCH_DELAY_BASE + LAUNCH_DELAY_VARIANCE * thread_rng().gen::<f32>()
+}
+
 fn setup(
+    mut spawn_event: EventWriter<SpawnQotileEvent>,
+) {
+    spawn_event.send(SpawnQotileEvent);
+}
+
+fn spawn(
     mut commands: Commands,
+    mut spawn_event: EventReader<SpawnQotileEvent>,
     asset_server: Res<AssetServer>,
 ) {
+    if spawn_event.iter().next().is_none() {
+        return
+    }
+
     let mut transform = Transform::from_scale( Vec3::splat( crate::SCREEN_SCALE ) );
     transform.translation.x += (SCREEN_SIZE.x/2.0) - (QOTILE_SPRITE_SIZE.x * crate::SCREEN_SCALE/2.0) - QOTILE_INSET;
 
@@ -71,7 +100,7 @@ fn setup(
             transform: transform,
             ..default()
         })
-        .insert(SwirlTimer(Timer::from_seconds(1.0, false)))
+        .insert(SwirlTimer(Timer::from_seconds(swirl_delay(), false)))
         .insert(AnimationTimer(Timer::from_seconds(0.05, true)))
         .insert(Qotile{
             swirl_state: SwirlState::NotSwirl,
@@ -79,6 +108,22 @@ fn setup(
             anim_frame: 0,
             flight_vector: Vec3::default(),
         } );
+}
+
+pub fn despawn(
+    mut commands: Commands,
+    mut despawn_event: EventReader<DespawnQotileEvent>,
+    mut spawn_event: EventWriter<SpawnQotileEvent>,
+    query: Query<Entity, With<Qotile>>
+) {
+    if despawn_event.iter().next().is_none() || query.is_empty() {
+        return;
+    }
+
+    let e = query.single();
+    commands.entity(e).despawn();
+
+    spawn_event.send(SpawnQotileEvent);
 }
 
 fn animate(
@@ -125,7 +170,7 @@ fn timer(
             SwirlState::NotSwirl => {
                 qotile.anim = QotileAnim::Swirl;
                 qotile.swirl_state = SwirlState::SwirlIdle;
-                timer.set_duration( Duration::from_secs(1) );
+                timer.set_duration( Duration::from_secs_f32(launch_delay()) );
                 timer.reset();
 
                 commands
@@ -181,4 +226,19 @@ pub fn leave_world(
     if util::is_offscreen( transform.translation ) {
         despawn_event.send(DespawnQotileEvent);
     }
+}
+
+pub fn died(
+    mut death_event: EventReader<QotileDiedEvent>,
+    mut despawn_event: EventWriter<DespawnQotileEvent>,
+) {
+    if death_event.iter().next().is_none() {
+        return
+    }
+
+    // todo: victory stuffs
+
+    println!("QOTILE DEAD, YOU WIN");
+
+    despawn_event.send(DespawnQotileEvent);
 }

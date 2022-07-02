@@ -38,7 +38,7 @@ impl Default for ColorPalette
         ];
 
         Self {
-            neutral_zone_colors: neutral_zone_colors,
+            neutral_zone_colors,
         }
     }
 }
@@ -116,17 +116,17 @@ pub fn color_shift(
         return
     }
 
-    let (mut timer) = nz_query.single_mut();
+    let mut timer = nz_query.single_mut();
     timer.tick(time.delta());
     if timer.just_finished() {
-        for (mut sprite) in chunk_query.iter_mut() {
-            let mut rng = rand::thread_rng();
+        for mut sprite in chunk_query.iter_mut() {
+            let mut rng = thread_rng();
             let black_chance: f32 = rng.gen();
 
             if black_chance < 0.35 {
                 sprite.color = Color::rgb( 0.0, 0.0, 0.0 );
             } else {
-                sprite.color = color_palette.neutral_zone_colors.choose(&mut rand::thread_rng()).unwrap().clone();
+                sprite.color = *color_palette.neutral_zone_colors.choose(&mut thread_rng()).unwrap();
             }
         }
     }

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::math::const_vec2;
 use crate::yar::{Yar, YAR_BOUNDS, YarShootEvent, YarDiedEvent};
 use crate::qotile::{Qotile, QOTILE_BOUNDS, QotileDiedEvent};
+use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
 use crate::util;
@@ -27,6 +28,7 @@ impl Plugin for ZorlonCannonPlugin {
             .add_system(leave_world)
             .add_system(collide_yar)
             .add_system(collide_qotile)
+            .add_system(collide_shield)
         ;
     }
 }
@@ -187,5 +189,32 @@ pub fn collide_qotile(
         &ZORLON_CANNON_BOUNDS) {
         death_event.send(QotileDiedEvent);
         despawn_event.send(DespawnZorlonCannonEvent);
+    }
+}
+
+pub fn collide_shield(
+    mut despawn_event: EventWriter<DespawnZorlonCannonEvent>,
+    mut shield_query: Query<(&Transform, &mut ShieldHealth), (With<ShieldBlock>, Without<ZorlonCannon>)>,
+    zc_query: Query<(&Transform, &ZorlonCannon), Without<ShieldBlock>>
+) {
+    if shield_query.is_empty() || zc_query.is_empty() {
+        return
+    }
+
+    let (zc_transform, zorlon_cannon) = zc_query.single();
+    if !zorlon_cannon.launched {
+        return
+    }
+
+    for (shield_transform, mut shield_health) in shield_query.iter_mut() {
+        if util::intersect_rect(
+            &shield_transform.translation,
+            &YAR_BOUNDS,
+            &zc_transform.translation,
+            &SHIELD_BLOCK_SPRITE_SIZE) {
+            shield_health.health -= 5;
+            despawn_event.send(DespawnZorlonCannonEvent);
+            return // Can only break one shield block at a time. Awful, really.
+        }
     }
 }

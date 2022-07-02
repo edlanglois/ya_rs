@@ -2,11 +2,13 @@ use bevy::prelude::*;
 use bevy::math::const_vec2;
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
-use crate::qotile::{Qotile, QOTILE_BOUNDS};
+use crate::qotile::{Qotile, QOTILE_BOUNDS, SwirlState};
 use crate::zorlon_cannon::SpawnZorlonCannonEvent;
+use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
 
 pub const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
+const YAR_EAT_KNOCKBACK:f32 = 8.0 * SCREEN_SCALE;
 
 pub struct YarShootEvent;
 pub struct YarDiedEvent;
@@ -24,6 +26,7 @@ impl Plugin for YarPlugin {
             .add_system(input)
             .add_system(animate)
             .add_system(collide_qotile)
+            .add_system(collide_shield)
             .add_system(death)
             .add_system(respawn)
         ;
@@ -262,22 +265,54 @@ pub fn animate(
 
 pub fn collide_qotile(
     mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
+    mut death_event: EventWriter<YarDiedEvent>,
     yar_query: Query<&Transform, (With<Yar>, Without<Qotile>)>,
-    qotile_query: Query<&Transform, (With<Qotile>, Without<Yar>)>
+    qotile_query: Query<(&Transform, &Qotile), Without<Yar>>
 ) {
     if yar_query.is_empty() || qotile_query.is_empty() {
         return
     }
 
     let yar_transform = yar_query.single();
-    let qotile_transform = qotile_query.single();
+    let ( qotile_transform, qotile) = qotile_query.single();
 
     if util::intersect_rect(
         &yar_transform.translation,
         &YAR_BOUNDS,
         &qotile_transform.translation,
         &QOTILE_BOUNDS) {
-        spawn_event.send(SpawnZorlonCannonEvent);
+        if matches!(qotile.swirl_state, SwirlState::NotSwirl) {
+            spawn_event.send(SpawnZorlonCannonEvent);
+        } else {
+            death_event.send(YarDiedEvent);
+        }
+    }
+}
+
+pub fn collide_shield(
+    mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
+    mut yar_query: Query<(&mut Transform, &Yar), Without<ShieldBlock>>,
+    mut shield_query: Query<(&Transform, &mut ShieldHealth), With<ShieldBlock>>
+) {
+    if yar_query.is_empty() || shield_query.is_empty() {
+        return
+    }
+
+    let (mut yar_transform, yar) = yar_query.single_mut();
+    for ( shield_transform, mut shield_health ) in shield_query.iter_mut() {
+        if util::intersect_rect(
+            &yar_transform.translation,
+            &YAR_BOUNDS,
+            &shield_transform.translation,
+            &SHIELD_BLOCK_SPRITE_SIZE) {
+            shield_health.health -= 1;
+
+            let mut knockback = yar.direction_to_vector();
+            knockback.z = 0.0;
+            yar_transform.translation -= knockback * YAR_EAT_KNOCKBACK;
+
+            spawn_event.send(SpawnZorlonCannonEvent);
+        }
     }
 }
 

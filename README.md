@@ -54,29 +54,27 @@ Hour 9:
 - [x] Swirl fires at Yar
 
 Hour 10:
-- [ ] Swirl resets Qotile on leave world.
-- [ ] Better (random) swirl state timing.
-- [ ] Swirl kills Yar on collide
-- [ ] Zorlon Cannon kills Qotile & Swirl
-- [ ] Qotile Death
-- [ ] Qotile moves with Shield.
-
-Hour 10:
-- [ ] Qotile's Shield
-- [ ] Yar bites/eats Shield on collide.
-- [ ] Zorlon Cannon create on Eat.
+- [x] Swirl resets Qotile on leave world.
+- [x] Swirl kills Yar on collide
+- [x] Improve swirl state timing.
+- [x] Zorlon Cannon kills Qotile & Swirl
 
 Hour 11:
-
+- [x] Qotile's Shield
+- [x] Yar bites/eats Shield on collide.
+- [x] Zorlon Cannon create on Eat.
+- [x] Bullet damages shield.
+- [x] Zorlon Cannon damages shield.
 
 Hour 12:
-- [ ] WASM
-- [ ] React Web & Host
+- [ ] 
 
 Bugs:
-- [ ] Remove Destroyer Missile on Death
+- [ ] Destroyer Missile doesn't reset on Death
 
 Future:
+- [ ] WASM
+- [ ] React Web & Host
 - [ ] Victory / Death Screen
 - [ ] Scoring / Scoreboard
 - [ ] VFX: Zorlon Cannon Pulse
