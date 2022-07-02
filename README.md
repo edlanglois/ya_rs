@@ -50,7 +50,13 @@ Hour 8:
 - [x] Neutral Zone provides immunity from Destroyer Missile
 
 Hour 9:
-- [ ] Swirl
+- [x] Swirl
+- [x] Swirl fires at Yar
+
+Hour 10:
+- [ ] Swirl resets Qotile on leave world.
+- [ ] Better (random) swirl state timing.
+- [ ] Swirl kills Yar on collide
 - [ ] Zorlon Cannon kills Qotile & Swirl
 - [ ] Qotile Death
 - [ ] Qotile moves with Shield.

@@ -60,7 +60,7 @@ pub struct Yar {
 
 impl Yar {
     pub fn is_dead(&self) -> bool {
-        self.anim == YarAnim::Death
+        matches!(self.anim, YarAnim::Death)
     }
 
     pub fn direction_to_vector(&self) -> Vec3 {

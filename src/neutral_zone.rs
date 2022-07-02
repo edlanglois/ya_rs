@@ -64,7 +64,6 @@ pub struct NeutralZoneChunk;
 #[derive(Component, Deref, DerefMut)]
 pub struct ChunkShiftTimer(pub Timer);
 
-
 pub fn spawn(
     mut commands: Commands,
 ) {
