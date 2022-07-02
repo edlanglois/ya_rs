@@ -8,6 +8,19 @@ const QOTILE_SPRITE_SIZE:Vec2 = const_vec2!([16.0, 18.0]);
 const QOTILE_INSET:f32 = 16.0;
 pub const QOTILE_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 18.0*SCREEN_SCALE]);
 
+pub struct QotileDiedEvent;
+
+pub struct QotilePlugin;
+
+impl Plugin for QotilePlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_event::<QotileDiedEvent>()
+            .add_startup_system(setup)
+        ;
+    }
+}
+
 #[derive(Component)]
 pub struct Qotile;
 

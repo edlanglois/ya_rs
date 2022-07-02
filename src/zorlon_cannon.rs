@@ -1,28 +1,24 @@
 use bevy::prelude::*;
 use bevy::math::const_vec2;
-use crate::yar::{Yar, YAR_BOUNDS, YarDiedEvent};
-use crate::qotile::{Qotile, QOTILE_BOUNDS};
+use crate::yar::{Yar, YAR_BOUNDS, YarShootEvent, YarDiedEvent};
+use crate::qotile::{Qotile, QOTILE_BOUNDS, QotileDiedEvent};
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
-use crate::{ShootEvent, QotileDiedEvent, SpawnZorlonCannon, DespawnZorlonCannon};
 use crate::util;
 
 const ZORLON_CANNON_SPEED:f32 = 6.0;
 const ZORLON_CANNON_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
 
-#[derive(Component, Default)]
-pub struct ZorlonCannonState
-{
-    pub zorlon_cannon: Option<Entity>,
-    pub zorlon_launched: bool,
-}
+pub struct SpawnZorlonCannonEvent;
+pub struct DespawnZorlonCannonEvent;
 
 pub struct ZorlonCannonPlugin;
 
 impl Plugin for ZorlonCannonPlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_resource::<ZorlonCannonState>()
+            .add_event::<SpawnZorlonCannonEvent>()
+            .add_event::<DespawnZorlonCannonEvent>()
             .add_system(spawn)
             .add_system(despawn)
             .add_system(track)
@@ -36,164 +32,126 @@ impl Plugin for ZorlonCannonPlugin {
 }
 
 #[derive(Component)]
-pub struct ZorlonCannon;
+pub struct ZorlonCannon
+{
+    launched: bool,
+}
 
 pub fn spawn(
     mut commands: Commands,
-    mut zc_state: ResMut<ZorlonCannonState>,
-    mut spawn_event: EventReader<SpawnZorlonCannon>,
-    query: Query<(&Transform, &Handle<TextureAtlas>, &Yar)>
+    mut spawn_event: EventReader<SpawnZorlonCannonEvent>,
+    yar_query: Query<(&Transform, &Handle<TextureAtlas>), (With<Yar>, Without<ZorlonCannon>)>,
+    zc_query: Query<&Transform, (With<ZorlonCannon>, Without<Yar>)>
 ) {
-    if query.is_empty() {
+    if spawn_event.iter().next().is_none() || yar_query.is_empty() || !zc_query.is_empty() {
         return
     }
 
-    let (yar_transform, texture_atlas_handle, _) = query.single();
+    let (yar_transform, texture_atlas_handle) = yar_query.single();
 
     let mut zorlon_transform = yar_transform.clone();
     zorlon_transform.translation.x = -SCREEN_SIZE.x / 2.0;
 
-    for _e in spawn_event.iter() {
-        if zc_state.zorlon_cannon.is_some() {
-            return;
-        }
-
-        zc_state.zorlon_cannon = Some(commands
-            .spawn_bundle(SpriteSheetBundle {
-                sprite: TextureAtlasSprite { index: 23, ..default() },
-                texture_atlas: texture_atlas_handle.clone(),
-                transform: zorlon_transform.clone(),
-                ..default()
-            })
-            .insert(ZorlonCannon).id()
-        );
-    }
+    commands
+        .spawn_bundle(SpriteSheetBundle {
+            sprite: TextureAtlasSprite { index: 23, ..default() },
+            texture_atlas: texture_atlas_handle.clone(),
+            transform: zorlon_transform.clone(),
+            ..default()
+        })
+        .insert(ZorlonCannon {
+            launched: false
+        });
 }
 
 pub fn despawn(
     mut commands: Commands,
-    mut zc_state: ResMut<ZorlonCannonState>,
-    mut despawn_event: EventReader<DespawnZorlonCannon>,
-    query: Query<(Entity, &ZorlonCannon)>
+    mut despawn_event: EventReader<DespawnZorlonCannonEvent>,
+    zc_query: Query<Entity, With<ZorlonCannon>>
 ) {
-    if query.is_empty() {
+    if despawn_event.iter().next().is_none() || zc_query.is_empty() {
         return;
     }
 
-    if despawn_event.iter().next().is_none() {
-        return;
-    }
-
-    let (e, _zorlon_cannon) = query.single();
-
+    let e = zc_query.single();
     commands.entity(e).despawn();
-    zc_state.zorlon_cannon = None;
-    zc_state.zorlon_launched = false;
 }
 
 pub fn track(
-    zc_state: ResMut<ZorlonCannonState>,
-    mut query: Query<(&mut Transform, Option<&Yar>, Option<&ZorlonCannon>)>
+    yar_query: Query<&Transform, (With<Yar>, Without<ZorlonCannon>)>,
+    mut zc_query: Query<(&mut Transform, &ZorlonCannon), Without<Yar>>
 ) {
-    if zc_state.zorlon_cannon.is_none() {
-        return;
+    if yar_query.is_empty() || zc_query.is_empty() {
+        return
     }
 
-    if zc_state.zorlon_launched {
-        return;
+    let (mut zc_transform, zorlon_cannon) = zc_query.single_mut();
+    if zorlon_cannon.launched {
+        return
     }
 
-    let mut yar_transform = Transform::identity();
-
-    for (transform, yar, _zorlon_cannon) in query.iter_mut() {
-        if yar.is_some() {
-            yar_transform = transform.clone();
-        }
-
-    }
-
-   for (mut transform, _yar, zorlon_cannon) in query.iter_mut() {
-        if zorlon_cannon.is_some() {
-            transform.translation.y = yar_transform.translation.y;
-            return
-        }
-    }
+    let yar_transform = yar_query.single();
+    zc_transform.translation.y = yar_transform.translation.y;
 }
 
 pub fn shoot(
-    mut zc_state: ResMut<ZorlonCannonState>,
-    mut shoot_event: EventReader<ShootEvent>,
+    mut shoot_event: EventReader<YarShootEvent>,
+    mut zc_query: Query<&mut ZorlonCannon>
 ) {
-    if zc_state.zorlon_cannon.is_none() {
-        return;
+    if shoot_event.iter().next().is_none() || zc_query.is_empty() {
+        return
     }
 
-    if shoot_event.iter().next().is_some() {
-        zc_state.zorlon_launched = true;
-    }
+    let mut zorlon_cannon = zc_query.single_mut();
+    zorlon_cannon.launched = true;
 }
 
 pub fn fly(
-    zc_state: ResMut<ZorlonCannonState>,
-    mut query: Query<(&mut Transform, &ZorlonCannon)>
+    mut zc_query: Query<(&mut Transform, &ZorlonCannon)>
 ) {
-    if zc_state.zorlon_cannon.is_none() {
-        return;
+    if zc_query.is_empty() {
+        return
     }
 
-    if !zc_state.zorlon_launched {
+    let (mut transform, zorlon_cannon) = zc_query.single_mut();
+    if !zorlon_cannon.launched {
         return;
     }
-
-    if query.is_empty() {
-        return;
-    }
-
-    let (mut transform, _zorlon_cannon ) = query.single_mut();
 
     transform.translation.x += ZORLON_CANNON_SPEED;
 }
 
 pub fn leave_world(
-    mut despawn_event: EventWriter<DespawnZorlonCannon>,
-    mut query: Query<(&Transform, &ZorlonCannon)>
+    mut despawn_event: EventWriter<DespawnZorlonCannonEvent>,
+    mut query: Query<&Transform, With<ZorlonCannon>>
 ) {
     if query.is_empty() {
         return;
     }
 
-    let (transform, _zorlon_cannon ) = query.single_mut();
+    let transform = query.single_mut();
 
     if util::is_offscreen( transform.translation ) {
-        despawn_event.send(DespawnZorlonCannon);
+        despawn_event.send(DespawnZorlonCannonEvent);
     }
 }
 
 pub fn collide_yar(
-    zc_state: ResMut<ZorlonCannonState>,
     mut death_event: EventWriter<YarDiedEvent>,
-    mut despawn_event: EventWriter<DespawnZorlonCannon>,
-    query: Query<(&Transform, Option<&Yar>, Option<&ZorlonCannon>)>,
+    mut despawn_event: EventWriter<DespawnZorlonCannonEvent>,
+    yar_query: Query<&Transform, (With<Yar>, Without<ZorlonCannon>)>,
+    zc_query: Query<(&Transform, &ZorlonCannon), Without<Yar>>
 ) {
-    if zc_state.zorlon_cannon.is_none() {
-        return;
+    if yar_query.is_empty() || zc_query.is_empty() {
+        return
     }
 
-    if !zc_state.zorlon_launched {
-        return;
+    let (zc_transform, zorlon_cannon) = zc_query.single();
+    if !zorlon_cannon.launched {
+        return
     }
 
-    let mut yar_transform = Transform::identity();
-    let mut zc_transform = Transform::identity();
-
-    for (transform, yar, zc) in query.iter() {
-        if yar.is_some() {
-            yar_transform = transform.clone();
-        }
-        if zc.is_some() {
-            zc_transform = transform.clone();
-        }
-    }
+    let yar_transform = yar_query.single();
 
     if util::intersect_rect(
         &yar_transform.translation,
@@ -201,35 +159,26 @@ pub fn collide_yar(
         &zc_transform.translation,
         &ZORLON_CANNON_BOUNDS) {
         death_event.send(YarDiedEvent);
-        despawn_event.send(DespawnZorlonCannon);
+        despawn_event.send(DespawnZorlonCannonEvent);
     }
 }
 
 pub fn collide_qotile(
-    zc_state: ResMut<ZorlonCannonState>,
     mut death_event: EventWriter<QotileDiedEvent>,
-    mut despawn_event: EventWriter<DespawnZorlonCannon>,
-    query: Query<(&Transform, Option<&Qotile>, Option<&ZorlonCannon>)>,
+    mut despawn_event: EventWriter<DespawnZorlonCannonEvent>,
+    qotile_query: Query<&Transform, (With<Qotile>, Without<ZorlonCannon>)>,
+    zc_query: Query<(&Transform, &ZorlonCannon), Without<Qotile>>
 ) {
-    if zc_state.zorlon_cannon.is_none() {
-        return;
+    if qotile_query.is_empty() || zc_query.is_empty() {
+        return
     }
 
-    if !zc_state.zorlon_launched {
-        return;
+    let (zc_transform, zorlon_cannon) = zc_query.single();
+    if !zorlon_cannon.launched {
+        return
     }
 
-    let mut q_transform = Transform::identity();
-    let mut zc_transform = Transform::identity();
-
-    for (transform, yar, zc) in query.iter() {
-        if yar.is_some() {
-            q_transform = transform.clone();
-        }
-        if zc.is_some() {
-            zc_transform = transform.clone();
-        }
-    }
+    let q_transform = qotile_query.single();
 
     if util::intersect_rect(
         &q_transform.translation,
@@ -237,6 +186,6 @@ pub fn collide_qotile(
         &zc_transform.translation,
         &ZORLON_CANNON_BOUNDS) {
         death_event.send(QotileDiedEvent);
-        despawn_event.send(DespawnZorlonCannon);
+        despawn_event.send(DespawnZorlonCannonEvent);
     }
 }

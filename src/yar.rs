@@ -1,13 +1,14 @@
 use bevy::prelude::*;
 use bevy::math::const_vec2;
-use crate::{ShootEvent, SpawnZorlonCannon};
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
 use crate::qotile::{Qotile, QOTILE_BOUNDS};
+use crate::zorlon_cannon::SpawnZorlonCannonEvent;
 use crate::util;
 
 pub const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
 
+pub struct YarShootEvent;
 pub struct YarDiedEvent;
 pub struct YarRespawnEvent;
 
@@ -16,6 +17,7 @@ pub struct YarPlugin;
 impl Plugin for YarPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_event::<YarShootEvent>()
             .add_event::<YarDiedEvent>()
             .add_event::<YarRespawnEvent>()
             .add_startup_system(setup.after(crate::setup_sprites))
@@ -44,7 +46,7 @@ pub enum YarDirection {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-enum YarAnim {
+pub enum YarAnim {
     Fly,
     Death,
 }
@@ -53,7 +55,26 @@ enum YarAnim {
 pub struct Yar {
     pub direction: YarDirection,
     anim_frame: usize,
-    anim: YarAnim,
+    pub anim: YarAnim,
+}
+
+impl Yar {
+    pub fn is_dead(&self) -> bool {
+        self.anim == YarAnim::Death
+    }
+
+    pub fn direction_to_vector(&self) -> Vec3 {
+        match self.direction {
+            YarDirection::Left => Vec3::new(-1.0,0.0, 1.0),
+            YarDirection::Right => Vec3::new(1.0,0.0, 1.0),
+            YarDirection::Up => Vec3::new(0.0,1.0, 1.0),
+            YarDirection::UpRight => Vec3::new(1.0,1.0, 1.0),
+            YarDirection::UpLeft => Vec3::new(-1.0,1.0, 1.0),
+            YarDirection::Down => Vec3::new(0.0,-1.0, 1.0),
+            YarDirection::DownRight => Vec3::new(1.0,-1.0, 1.0),
+            YarDirection::DownLeft => Vec3::new(-1.0,-1.0, 1.0),
+        }
+    }
 }
 
 impl Default for Yar {
@@ -68,14 +89,14 @@ impl Default for Yar {
 
 pub fn setup(
     commands: Commands,
-    game_state: Res<crate::game_state::GameState>,
+    game_state: Res<crate::GameState>,
 ) {
     spawn( commands, game_state );
 }
 
 pub fn spawn(
     mut commands: Commands,
-    game_state: Res<crate::game_state::GameState>,
+    game_state: Res<crate::GameState>,
 ) {
     commands
         .spawn_bundle(SpriteSheetBundle {
@@ -89,8 +110,9 @@ pub fn spawn(
 
 pub fn input(
     keys: Res<Input<KeyCode>>,
-    mut shoot_event: EventWriter<ShootEvent>,
-    mut query: Query<(&mut Transform, &mut Yar)>) {
+    mut shoot_event: EventWriter<YarShootEvent>,
+    mut query: Query<(&mut Transform, &mut Yar)>)
+{
     if query.is_empty() {
         return
     }
@@ -178,7 +200,7 @@ pub fn input(
     }
 
     if keys.pressed( KeyCode::Space) {
-        shoot_event.send(ShootEvent);
+        shoot_event.send(YarShootEvent);
     }
 }
 
@@ -239,27 +261,23 @@ pub fn animate(
 }
 
 pub fn collide_qotile(
-    mut spawn_event: EventWriter<SpawnZorlonCannon>,
-    query: Query<(&Transform, Option<&Yar>, Option<&Qotile>)>,
+    mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
+    yar_query: Query<&Transform, (With<Yar>, Without<Qotile>)>,
+    qotile_query: Query<&Transform, (With<Qotile>, Without<Yar>)>
 ) {
-    let mut yar_transform = Transform::identity();
-    let mut qotile_transform = Transform::identity();
-
-    for (transform, yar, qotile) in query.iter() {
-        if yar.is_some() {
-            yar_transform = transform.clone();
-        }
-        if qotile.is_some() {
-            qotile_transform = transform.clone();
-        }
+    if yar_query.is_empty() || qotile_query.is_empty() {
+        return
     }
+
+    let yar_transform = yar_query.single();
+    let qotile_transform = qotile_query.single();
 
     if util::intersect_rect(
         &yar_transform.translation,
         &YAR_BOUNDS,
         &qotile_transform.translation,
         &QOTILE_BOUNDS) {
-        spawn_event.send(SpawnZorlonCannon);
+        spawn_event.send(SpawnZorlonCannonEvent);
     }
 }
 
@@ -278,7 +296,7 @@ pub fn death(
 
 pub fn respawn(
     commands: Commands,
-    game_state: Res<crate::game_state::GameState>,
+    game_state: Res<crate::GameState>,
     mut respawn_event: EventReader<YarRespawnEvent>,
 ) {
     if respawn_event.iter().next().is_none() {

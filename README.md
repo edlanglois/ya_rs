@@ -42,6 +42,9 @@ Hour 6:
 - [x] Yar Death
 - [x] Destroyer Missile
 
+Hour 7:
+- [x] Refactor and cleanup based on things learned so far!
+
 Future:
 - [ ] Qotile Death
 - [ ] VFX: Zorlon Cannon Pulse
