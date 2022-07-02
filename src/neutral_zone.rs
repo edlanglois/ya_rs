@@ -50,6 +50,7 @@ impl Plugin for NeutralZonePlugin {
         app
             .init_resource::<ColorPalette>()
             .add_startup_system(spawn)
+            //.add_system(despawn)
             .add_system(color_shift)
         ;
     }
@@ -105,7 +106,26 @@ pub fn spawn(
         .insert(zone_origin )
         .insert(NeutralZone);
 }
+/*
+pub fn despawn(
+    mut commands: Commands,
+    mut death_event: EventReader<YarDiedEvent>,
+    nz_query: Query<Entity, With<NeutralZone>>,
+    chunks_query: Query<Entity, With<NeutralZoneChunk>>,
+) {
+    if death_event.iter().next().is_none() {
+        return;
+    }
 
+    for e in nz_query.iter() {
+        commands.entity(e).despawn();
+    }
+
+    for e in chunks_query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+*/
 pub fn color_shift(
     color_palette: Res<ColorPalette>,
     time: Res<Time>,

@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use bevy::math::const_vec2;
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
-use crate::qotile::{Qotile, QOTILE_BOUNDS, SwirlState};
-use crate::zorlon_cannon::SpawnZorlonCannonEvent;
+use crate::qotile::{Qotile, QOTILE_BOUNDS, SwirlState, DespawnQotileEvent};
+use crate::zorlon_cannon::{SpawnZorlonCannonEvent};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
 
@@ -83,7 +83,7 @@ impl Yar {
 impl Default for Yar {
     fn default() -> Self {
         Yar {
-            direction: YarDirection::Up,
+            direction: YarDirection::Down,
             anim_frame: 0,
             anim: YarAnim::Fly,
         }
@@ -101,10 +101,13 @@ pub fn spawn(
     mut commands: Commands,
     game_state: Res<crate::GameState>,
 ) {
+    let mut transform = Transform::from_scale(Vec3::splat(crate::SCREEN_SCALE));
+    transform.translation.x -= (SCREEN_SIZE.x/2.0) - (YAR_BOUNDS.x * 2.0);
+
     commands
         .spawn_bundle(SpriteSheetBundle {
             texture_atlas: game_state.sprite_atlas.clone(),
-            transform: Transform::from_scale(Vec3::splat(crate::SCREEN_SCALE)),
+            transform: transform,
             ..default()
         })
         .insert(Yar::default())
@@ -266,6 +269,7 @@ pub fn animate(
 pub fn collide_qotile(
     mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
     mut death_event: EventWriter<YarDiedEvent>,
+    mut despawn_event: EventWriter<DespawnQotileEvent>,
     yar_query: Query<&Transform, (With<Yar>, Without<Qotile>)>,
     qotile_query: Query<(&Transform, &Qotile), Without<Yar>>
 ) {
@@ -285,6 +289,7 @@ pub fn collide_qotile(
             spawn_event.send(SpawnZorlonCannonEvent);
         } else {
             death_event.send(YarDiedEvent);
+            despawn_event.send(DespawnQotileEvent);
         }
     }
 }
@@ -320,7 +325,7 @@ pub fn death(
     mut death_event: EventReader<YarDiedEvent>,
     mut query: Query<&mut Yar>,
 ) {
-    if death_event.iter().next().is_none() {
+    if death_event.iter().next().is_none() || query.is_empty() {
         return;
     }
 

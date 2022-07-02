@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 use bevy::math::const_vec2;
-use crate::yar::{Yar, YarShootEvent};
+use crate::yar::{Yar, YAR_BOUNDS, YarShootEvent, YarDiedEvent};
 use crate::zorlon_cannon::ZorlonCannon;
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
+use crate::neutral_zone::{NeutralZone, NEUTRAL_ZONE_BOUNDS};
 use crate::SCREEN_SCALE;
 use crate::util;
 
@@ -33,9 +34,10 @@ pub struct Bullet {
 pub fn despawn(
     mut commands: Commands,
     mut despawn_event: EventReader<DespawnBulletEvent>,
+    mut death_event: EventReader<YarDiedEvent>,
     query: Query<Entity, With<Bullet>>
 ) {
-    if despawn_event.iter().next().is_none() || query.is_empty() {
+    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none()) || query.is_empty() {
         return;
     }
 
@@ -49,12 +51,26 @@ pub fn shoot(
     yar_query: Query<(&Transform, &Handle<TextureAtlas>, &Yar), (Without<ZorlonCannon>, Without<ZorlonCannon>)>,
     zc_query: Query<Entity, (With<ZorlonCannon>, Without<Yar>, Without<Bullet>)>,
     bullet_query: Query<&Bullet, (Without<Yar>, Without<ZorlonCannon>)>,
+    nz_query: Query<&Transform, With<NeutralZone>>,
 ) {
     if shoot_event.iter().next().is_none() || !zc_query.is_empty() || yar_query.is_empty() || !bullet_query.is_empty() {
         return
     }
 
     let (transform, texture_atlas_handle, yar) = yar_query.single();
+
+    if !nz_query.is_empty() {
+        let nz_transform = nz_query.single();
+
+        // Yar cannot shoot while in the Neutral Zone
+        if util::intersect_rect(
+            &transform.translation,
+            &YAR_BOUNDS,
+            &nz_transform.translation,
+            &NEUTRAL_ZONE_BOUNDS) {
+            return
+        }
+    }
 
     commands
         .spawn_bundle(SpriteSheetBundle {
@@ -68,7 +84,6 @@ pub fn shoot(
 
 
 pub fn fly(
-    mut commands: Commands,
     mut despawn_event: EventWriter<DespawnBulletEvent>,
     mut query: Query<(&mut Transform, &Bullet)>
 ) {

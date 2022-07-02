@@ -69,13 +69,14 @@ pub fn spawn(
 pub fn despawn(
     mut commands: Commands,
     mut despawn_event: EventReader<DespawnZorlonCannonEvent>,
-    zc_query: Query<Entity, With<ZorlonCannon>>
+    mut death_event: EventReader<YarDiedEvent>,
+    query: Query<Entity, With<ZorlonCannon>>
 ) {
-    if despawn_event.iter().next().is_none() || zc_query.is_empty() {
+    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none()) || query.is_empty() {
         return;
     }
 
-    let e = zc_query.single();
+    let e = query.single();
     commands.entity(e).despawn();
 }
 

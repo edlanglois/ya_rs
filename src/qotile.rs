@@ -113,13 +113,18 @@ fn spawn(
 pub fn despawn(
     mut commands: Commands,
     mut despawn_event: EventReader<DespawnQotileEvent>,
+    //mut death_event: EventReader<YarDiedEvent>,
     mut spawn_event: EventWriter<SpawnQotileEvent>,
     query: Query<Entity, With<Qotile>>
 ) {
     if despawn_event.iter().next().is_none() || query.is_empty() {
         return;
     }
-
+/*
+    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none()) || query.is_empty() {
+        return;
+    }
+*/
     let e = query.single();
     commands.entity(e).despawn();
 

@@ -63,13 +63,10 @@ pub fn spawn(
 pub fn despawn(
     mut commands: Commands,
     mut despawn_event: EventReader<DespawnDestroyerMissileEvent>,
+    mut death_event: EventReader<YarDiedEvent>,
     query: Query<Entity, With<DestroyerMissile>>
 ) {
-    if query.is_empty() {
-        return;
-    }
-
-    if despawn_event.iter().next().is_none() {
+    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none()) || query.is_empty() {
         return;
     }
 

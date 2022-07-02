@@ -7,7 +7,7 @@ Implement Yars' Revenge in <12 hours in Rust.
 
 Learning Bevy & Rust!
 
-**7 / 12 Hours Complete!**
+**12 / 12 Hours Complete!**
 
 Hour 1:
 - [x] Plan
@@ -67,16 +67,22 @@ Hour 11:
 - [x] Zorlon Cannon damages shield.
 
 Hour 12:
-- [ ] 
+- [x] Yar cannot shoot while in the Neutral Zone.
+- [x] Qotile and Destroyer Missile despawn on Yar death.
+- [x] WASM - Wasn't much to do here, Bevy just worked with wasm-pack.
+- [x] React Web & Host
 
-Bugs:
-- [ ] Destroyer Missile doesn't reset on Death
-
-Future:
-- [ ] WASM
-- [ ] React Web & Host
-- [ ] Victory / Death Screen
+Missing Features:
 - [ ] Scoring / Scoreboard
+- [ ] Victory / Death Screen
+- [ ] 4 Lives
+- [ ] Scoring
+- [ ] Shifting Shield
+- [ ] Moving Shield
+- [ ] Game Modes 2 & 4 (Multiplayer)
+- [ ] Game Mode 3 - Alternating Shields
+- [ ] Game Mode 4 - Bouncing Zorlon Cannon
+- [ ] Game Mode 6 - Ultimate Yars
 - [ ] VFX: Zorlon Cannon Pulse
 - [ ] VFX: Qotile Death Transition
 - [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)

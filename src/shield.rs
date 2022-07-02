@@ -13,6 +13,7 @@ impl Plugin for ShieldPlugin {
             .add_event::<SpawnShieldEvent>()
             .add_startup_system(setup)
             .add_system(spawn)
+            //.add_system(despawn)
             .add_system(monitor_health)
         ;
     }
@@ -104,6 +105,22 @@ pub fn spawn(
         block_offset.translation.y += SHIELD_BLOCK_SPRITE_SIZE.y;
     }
 }
+
+/*
+pub fn despawn(
+    mut commands: Commands,
+    mut death_event: EventReader<YarDiedEvent>,
+    blocks_query: Query<Entity, With<ShieldBlock>>,
+) {
+    if death_event.iter().next().is_none() {
+        return;
+    }
+
+    for e in blocks_query.iter() {
+        commands.entity(e).despawn();
+    }
+}
+ */
 
 pub fn monitor_health(
     mut commands: Commands,
