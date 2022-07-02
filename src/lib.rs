@@ -5,6 +5,7 @@ mod yar;
 mod qotile;
 mod bullet;
 mod util;
+mod neutral_zone;
 mod zorlon_cannon;
 mod destroyer_missile;
 
@@ -60,6 +61,7 @@ pub fn run() {
         .add_plugin(zorlon_cannon::ZorlonCannonPlugin)
         .add_plugin(destroyer_missile::DestroyerMissilePlugin)
         .add_plugin(qotile::QotilePlugin)
+        .add_plugin(neutral_zone::NeutralZonePlugin)
 
         .add_startup_system(setup_camera)
         .add_startup_system(setup_sprites)

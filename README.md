@@ -46,9 +46,8 @@ Hour 7:
 - [x] Refactor and cleanup based on things learned so far!
 
 Hour 8:
-- [ ] Remove Destroyer Missile on Death
-- [ ] Neutral Zone
-- [ ] Neutral Zone provides immunity from Destroyer Missile
+- [x] Neutral Zone
+- [x] Neutral Zone provides immunity from Destroyer Missile
 
 Hour 9:
 - [ ] Swirl
@@ -67,6 +66,9 @@ Hour 11:
 Hour 12:
 - [ ] WASM
 - [ ] React Web & Host
+
+Bugs:
+- [ ] Remove Destroyer Missile on Death
 
 Future:
 - [ ] Victory / Death Screen

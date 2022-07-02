@@ -4,6 +4,7 @@ use crate::SCREEN_SCALE;
 use crate::qotile::Qotile;
 use crate::yar::{Yar, YAR_BOUNDS, YarDiedEvent};
 use crate::util;
+use crate::neutral_zone::{NeutralZone, NEUTRAL_ZONE_BOUNDS};
 
 // Gameplay Note: Not sure if the destroyer missile spawns instantly in all difficulty modes.
 // Need to check...
@@ -96,7 +97,8 @@ pub fn collide_yar(
     mut death_event: EventWriter<YarDiedEvent>,
     mut despawn_event: EventWriter<DespawnDestroyerMissileEvent>,
     yar_query: Query<&Transform, (With<DestroyerMissile>, Without<Yar>)>,
-    dm_query: Query<&Transform, (With<Yar>, Without<DestroyerMissile>)>
+    dm_query: Query<&Transform, (With<Yar>, Without<DestroyerMissile>)>,
+    nz_query: Query<&Transform, With<NeutralZone>>,
 )
 {
     if dm_query.is_empty() || yar_query.is_empty() {
@@ -105,6 +107,19 @@ pub fn collide_yar(
 
     let yar_transform = yar_query.single();
     let dm_transform = dm_query.single();
+
+    if !nz_query.is_empty() {
+        let nz_transform = nz_query.single();
+
+        // Destroyer missile cannot harm Yar if it is within the neutral zone.
+        if util::intersect_rect(
+            &dm_transform.translation,
+            &DESTROYER_MISSILE_BOUNDS,
+            &nz_transform.translation,
+            &NEUTRAL_ZONE_BOUNDS) {
+            return
+        }
+    }
 
     if util::intersect_rect(
         &yar_transform.translation,

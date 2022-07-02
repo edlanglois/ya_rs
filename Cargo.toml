@@ -9,3 +9,4 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 bevy = "0.7.0"
+rand = "0.8.5"
