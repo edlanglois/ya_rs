@@ -8,6 +8,7 @@ mod game_state;
 mod shield;
 mod util;
 mod zorlon_cannon;
+mod destroyer_missile;
 
 // Not really, but close enough for this project.
 // We have no concept of playfield memory and sprite memory so...
@@ -17,8 +18,10 @@ const SCREEN_SCALE: f32 = 4.0;
 const SCREEN_SIZE:Vec2 = const_vec2!([ATARI_RES_X * SCREEN_SCALE, ATARI_RES_Y * SCREEN_SCALE]);
 const SPRITE_SIZE:Vec2 = const_vec2!([16.0, 16.0]);
 
-pub struct ShootBullet;
+pub struct ShootEvent;
+pub struct QotileDiedEvent;
 pub struct SpawnZorlonCannon;
+pub struct DespawnZorlonCannon;
 
 pub fn setup_camera(mut commands: Commands) {
     commands.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -34,7 +37,7 @@ pub fn setup_sprites(
         texture_handle,
         SPRITE_SIZE,
         8,
-        3,
+        4,
         Vec2::new(2.0, 2.0),
     );
 
@@ -51,20 +54,20 @@ pub fn run() {
         })
         .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_plugins(DefaultPlugins)
+        .add_plugin(crate::yar::YarPlugin)
+        .add_plugin(crate::zorlon_cannon::ZorlonCannonPlugin)
+        .add_plugin(crate::destroyer_missile::DestroyerMissilePlugin)
         .init_resource::<game_state::GameState>()
-        .add_event::<ShootBullet>()
+        .add_event::<ShootEvent>()
+        .add_event::<QotileDiedEvent>()
         .add_event::<SpawnZorlonCannon>()
+        .add_event::<DespawnZorlonCannon>()
         .add_startup_system(setup_camera)
         .add_startup_system(setup_sprites)
-        .add_startup_system(yar::setup.after(setup_sprites))
         .add_startup_system(shield::setup.after(setup_sprites))
         .add_startup_system(qotile::setup)
-        .add_system(yar::input)
-        .add_system(yar::animate)
-        .add_system(yar::collide_qotile)
         .add_system(bullet::shoot)
         .add_system(bullet::fly)
-        .add_system(zorlon_cannon::spawn)
         .run();
 }
 

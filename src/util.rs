@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::math::Vec3Swizzles;
 use crate::SCREEN_SIZE;
 
 pub fn is_offscreen(point: Vec3) -> bool {

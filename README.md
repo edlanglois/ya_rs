@@ -34,11 +34,18 @@ Hour 4:
 - [x] Zorlon Cannon create on collide Qotile.
 
 Hour 5:
-- [ ] Zorlon Cannon follow Yar.
-- [ ] Shoot fires Zorlon Cannon.
+- [x] Zorlon Cannon follow Yar.
+- [x] Shoot fires Zorlon Cannon.
+- [x] Zorlon Cannon despawns if leave world / hit Yar / hit Qotile.
 
+Hour 6:
+- [x] Yar Death
+- [x] Destroyer Missile
 
 Future:
+- [ ] Qotile Death
+- [ ] VFX: Zorlon Cannon Pulse
+- [ ] VFX: Qotile Death Transition
 - [ ] Qotile's Shield
 - [ ] Yar eat shield on collide.
 - [ ] Zorlon Cannon create on Eat.
@@ -50,7 +57,6 @@ Future:
 - [ ] Swirl
 - [ ] Homing Swirl
 - [ ] Zorlon Cannon kills Qotile & Swirl
-- [ ] Qotile Death
 - [ ] Victory
 - [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
 - [ ] WASM

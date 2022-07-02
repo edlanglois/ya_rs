@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::yar::Yar;
 use crate::yar::YarDirection;
 use crate::game_state::GameState;
-use crate::ShootBullet;
+use crate::zorlon_cannon::ZorlonCannonState;
+use crate::ShootEvent;
 use crate::util::is_offscreen;
 
 #[derive(Component)]
@@ -30,20 +31,25 @@ fn velocity_for_direction( direction: &YarDirection ) -> Vec3 {
 pub fn shoot(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    mut shoot_event: EventReader<ShootBullet>,
+    zc_state: ResMut<ZorlonCannonState>,
+    mut shoot_event: EventReader<ShootEvent>,
     mut query: Query<(&Transform, &Handle<TextureAtlas>, &Yar)>
 ) {
+    if zc_state.zorlon_cannon.is_some() {
+        return;
+    }
+
+    if game_state.bullet.is_some() {
+        return;
+    }
+
     if query.is_empty() {
         return
     }
 
     let (transform, texture_atlas_handle, yar) = query.single_mut();
 
-    for _e in shoot_event.iter() {
-        if game_state.bullet.is_some() {
-            return;
-        }
-
+    if shoot_event.iter().next().is_some() {
         game_state.bullet = Some(commands
             .spawn_bundle(SpriteSheetBundle {
                 sprite: TextureAtlasSprite { index: 21, ..default() },

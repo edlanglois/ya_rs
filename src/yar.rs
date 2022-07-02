@@ -1,19 +1,32 @@
 use bevy::prelude::*;
 use bevy::math::const_vec2;
-
-// todo:
-// flight
-// shoot
-// scale
-// eat
-
-use crate::{ShootBullet, SpawnZorlonCannon};
+use crate::{ShootEvent, SpawnZorlonCannon};
 use crate::SCREEN_SIZE;
 use crate::SCREEN_SCALE;
 use crate::qotile::{Qotile, QOTILE_BOUNDS};
 use crate::util;
 
-const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
+pub const YAR_BOUNDS:Vec2 = const_vec2!([16.0*SCREEN_SCALE, 16.0*SCREEN_SCALE]);
+
+pub struct YarDiedEvent;
+pub struct YarRespawnEvent;
+
+pub struct YarPlugin;
+
+impl Plugin for YarPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_event::<YarDiedEvent>()
+            .add_event::<YarRespawnEvent>()
+            .add_startup_system(setup.after(crate::setup_sprites))
+            .add_system(input)
+            .add_system(animate)
+            .add_system(collide_qotile)
+            .add_system(death)
+            .add_system(respawn)
+        ;
+    }
+}
 
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
@@ -30,10 +43,17 @@ pub enum YarDirection {
     DownLeft,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+enum YarAnim {
+    Fly,
+    Death,
+}
+
 #[derive(Component)]
 pub struct Yar {
     pub direction: YarDirection,
     anim_frame: usize,
+    anim: YarAnim,
 }
 
 impl Default for Yar {
@@ -41,15 +61,22 @@ impl Default for Yar {
         Yar {
             direction: YarDirection::Up,
             anim_frame: 0,
+            anim: YarAnim::Fly,
         }
     }
 }
 
 pub fn setup(
+    commands: Commands,
+    game_state: Res<crate::game_state::GameState>,
+) {
+    spawn( commands, game_state );
+}
+
+pub fn spawn(
     mut commands: Commands,
     game_state: Res<crate::game_state::GameState>,
 ) {
-//    let texture_atlas_handle = texture_atlases.add(texture_atlas);
     commands
         .spawn_bundle(SpriteSheetBundle {
             texture_atlas: game_state.sprite_atlas.clone(),
@@ -62,10 +89,16 @@ pub fn setup(
 
 pub fn input(
     keys: Res<Input<KeyCode>>,
-    mut shoot_event: EventWriter<ShootBullet>,
+    mut shoot_event: EventWriter<ShootEvent>,
     mut query: Query<(&mut Transform, &mut Yar)>) {
     if query.is_empty() {
         return
+    }
+
+    let (mut transform, mut yar) = query.single_mut();
+
+    if matches!(yar.anim, YarAnim::Death) {
+        return;
     }
 
     let mut yar_delta = Transform::identity();
@@ -113,8 +146,6 @@ pub fn input(
         }
     }
 
-    let (mut transform, mut yar) = query.single_mut();
-
     // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
     {
         let x_pos = transform.translation.x + yar_delta.translation.x;
@@ -147,13 +178,16 @@ pub fn input(
     }
 
     if keys.pressed( KeyCode::Space) {
-        shoot_event.send(ShootBullet);
+        shoot_event.send(ShootEvent);
     }
 }
 
 pub fn animate(
+    mut commands: Commands,
     time: Res<Time>,
+    mut respawn_event: EventWriter<YarRespawnEvent>,
     mut query: Query<(
+        Entity,
         &mut AnimationTimer,
         &mut TextureAtlasSprite,
         &mut Yar,
@@ -163,33 +197,50 @@ pub fn animate(
         return
     }
 
-    let (mut timer, mut sprite, mut yar) = query.single_mut();
+    let (e, mut timer, mut sprite, mut yar) = query.single_mut();
 
     timer.tick(time.delta());
     if timer.just_finished() {
-        let sprite_base = match yar.direction {
-            YarDirection::Up => 0,
-            YarDirection::UpRight => 2,
-            YarDirection::Right => 4,
-            YarDirection::DownRight => 6,
-            YarDirection::Down => 8,
-            YarDirection::DownLeft => 10,
-            YarDirection::Left => 12,
-            YarDirection::UpLeft => 14,
-        };
+        match yar.anim {
+            YarAnim::Fly => {
+                let sprite_base = match yar.direction {
+                    YarDirection::Up => 0,
+                    YarDirection::UpRight => 2,
+                    YarDirection::Right => 4,
+                    YarDirection::DownRight => 6,
+                    YarDirection::Down => 8,
+                    YarDirection::DownLeft => 10,
+                    YarDirection::Left => 12,
+                    YarDirection::UpLeft => 14,
+                };
 
-        let anim_length = 2;
+                let anim_length = 2;
 
-        yar.anim_frame = (yar.anim_frame + 1) % anim_length;
+                yar.anim_frame = (yar.anim_frame + 1) % anim_length;
 
-        sprite.index = sprite_base + yar.anim_frame;
+                sprite.index = sprite_base + yar.anim_frame;
+            }
+            YarAnim::Death => {
+                let death_anim: Vec<usize> = vec![5,7,9,11,13,15,1,1,1,1,16,16,16,17,17,17,18,19,20,22,22,22];
+                yar.anim_frame += 1;
+
+                if yar.anim_frame >= death_anim.len() {
+                    // todo: move this out of here
+                    // probably a despawn yar event, then respawn...
+                    commands.entity(e).despawn();
+
+                    respawn_event.send(YarRespawnEvent);
+                } else {
+                    sprite.index = death_anim[yar.anim_frame];
+                }
+            }
+        }
     }
 }
 
 pub fn collide_qotile(
     mut spawn_event: EventWriter<SpawnZorlonCannon>,
-    query: Query<(&Transform, Option<&Yar>, Option<&Qotile>,
-    )>,
+    query: Query<(&Transform, Option<&Yar>, Option<&Qotile>)>,
 ) {
     let mut yar_transform = Transform::identity();
     let mut qotile_transform = Transform::identity();
@@ -210,4 +261,29 @@ pub fn collide_qotile(
         &QOTILE_BOUNDS) {
         spawn_event.send(SpawnZorlonCannon);
     }
+}
+
+pub fn death(
+    mut death_event: EventReader<YarDiedEvent>,
+    mut query: Query<&mut Yar>,
+) {
+    if death_event.iter().next().is_none() {
+        return;
+    }
+
+    let mut yar = query.single_mut();
+    yar.anim = YarAnim::Death;
+    yar.anim_frame = 0;
+}
+
+pub fn respawn(
+    commands: Commands,
+    game_state: Res<crate::game_state::GameState>,
+    mut respawn_event: EventReader<YarRespawnEvent>,
+) {
+    if respawn_event.iter().next().is_none() {
+        return;
+    }
+
+    spawn( commands, game_state );
 }
