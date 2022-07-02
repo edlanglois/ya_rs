@@ -45,23 +45,32 @@ Hour 6:
 Hour 7:
 - [x] Refactor and cleanup based on things learned so far!
 
-Future:
-- [ ] Qotile Death
-- [ ] VFX: Zorlon Cannon Pulse
-- [ ] VFX: Qotile Death Transition
-- [ ] Qotile's Shield
-- [ ] Yar eat shield on collide.
-- [ ] Zorlon Cannon create on Eat.
-- [ ] Qotile moves with Shield.
-- [ ] Destroyer Missile
-- [ ] Yar Death
+Hour 8:
+- [ ] Remove Destroyer Missile on Death
 - [ ] Neutral Zone
 - [ ] Neutral Zone provides immunity from Destroyer Missile
+
+Hour 9:
 - [ ] Swirl
-- [ ] Homing Swirl
 - [ ] Zorlon Cannon kills Qotile & Swirl
-- [ ] Victory
-- [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
+- [ ] Qotile Death
+- [ ] Qotile moves with Shield.
+
+Hour 10:
+- [ ] Qotile's Shield
+- [ ] Yar bites/eats Shield on collide.
+- [ ] Zorlon Cannon create on Eat.
+
+Hour 11:
+
+
+Hour 12:
 - [ ] WASM
 - [ ] React Web & Host
+
+Future:
+- [ ] Victory / Death Screen
 - [ ] Scoring / Scoreboard
+- [ ] VFX: Zorlon Cannon Pulse
+- [ ] VFX: Qotile Death Transition
+- [ ] Sounds (need to extract from 2600 by running code slices in enmulator?)
