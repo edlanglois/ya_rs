@@ -1,16 +1,16 @@
-use bevy::prelude::*;
-use bevy::math::const_vec2;
-use crate::SCREEN_SCALE;
-use crate::qotile::Qotile;
-use crate::yar::{Yar, YAR_BOUNDS, YarDiedEvent};
-use crate::util;
 use crate::neutral_zone::{NeutralZone, NEUTRAL_ZONE_BOUNDS};
+use crate::qotile::Qotile;
+use crate::util;
+use crate::yar::{Yar, YarDiedEvent, YAR_BOUNDS};
+use crate::SCREEN_SCALE;
+use bevy::math::const_vec2;
+use bevy::prelude::*;
 
 // Gameplay Note: Not sure if the destroyer missile spawns instantly in all difficulty modes.
 // Need to check...
 
 const DESTROYER_MISSILE_SPEED: f32 = 0.5;
-pub const DESTROYER_MISSILE_BOUNDS:Vec2 = const_vec2!([8.0*SCREEN_SCALE, 2.0*SCREEN_SCALE]);
+pub const DESTROYER_MISSILE_BOUNDS: Vec2 = const_vec2!([8.0 * SCREEN_SCALE, 2.0 * SCREEN_SCALE]);
 
 //pub struct SpawnDestroyerMissileEvent;
 pub struct DespawnDestroyerMissileEvent;
@@ -22,13 +22,11 @@ pub struct DestroyerMissilePlugin;
 
 impl Plugin for DestroyerMissilePlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_event::<DespawnDestroyerMissileEvent>()
+        app.add_event::<DespawnDestroyerMissileEvent>()
             .add_system(spawn)
             .add_system(despawn)
             .add_system(track)
-            .add_system(collide_yar)
-        ;
+            .add_system(collide_yar);
     }
 }
 
@@ -37,16 +35,15 @@ pub fn spawn(
     asset_server: Res<AssetServer>,
     missile_query: Query<Entity, (With<DestroyerMissile>, Without<Yar>, Without<Qotile>)>,
     qotile_query: Query<&Transform, (With<Qotile>, Without<Yar>, Without<DestroyerMissile>)>,
-    yar_query: Query<&Yar, (Without<DestroyerMissile>, Without<Qotile>)>
-)
-{
+    yar_query: Query<&Yar, (Without<DestroyerMissile>, Without<Qotile>)>,
+) {
     if !missile_query.is_empty() || yar_query.is_empty() || qotile_query.is_empty() {
-        return
+        return;
     }
 
     let yar = yar_query.single();
     if yar.is_dead() {
-        return
+        return;
     }
 
     let qotile_transform = qotile_query.single();
@@ -64,9 +61,11 @@ pub fn despawn(
     mut commands: Commands,
     mut despawn_event: EventReader<DespawnDestroyerMissileEvent>,
     mut death_event: EventReader<YarDiedEvent>,
-    query: Query<Entity, With<DestroyerMissile>>
+    query: Query<Entity, With<DestroyerMissile>>,
 ) {
-    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none()) || query.is_empty() {
+    if (despawn_event.iter().next().is_none() && death_event.iter().next().is_none())
+        || query.is_empty()
+    {
         return;
     }
 
@@ -76,11 +75,10 @@ pub fn despawn(
 
 pub fn track(
     mut missile_query: Query<&mut Transform, (With<DestroyerMissile>, Without<Yar>)>,
-    yar_query: Query<&Transform, (With<Yar>, Without<DestroyerMissile>)>
-)
-{
+    yar_query: Query<&Transform, (With<Yar>, Without<DestroyerMissile>)>,
+) {
     if missile_query.is_empty() || yar_query.is_empty() {
-        return
+        return;
     }
 
     let yar_transform = yar_query.single();
@@ -96,8 +94,7 @@ pub fn collide_yar(
     yar_query: Query<&Transform, (With<DestroyerMissile>, Without<Yar>)>,
     dm_query: Query<&Transform, (With<Yar>, Without<DestroyerMissile>)>,
     nz_query: Query<&Transform, With<NeutralZone>>,
-)
-{
+) {
     if dm_query.is_empty() || yar_query.is_empty() {
         return;
     }
@@ -113,8 +110,9 @@ pub fn collide_yar(
             &dm_transform.translation,
             &DESTROYER_MISSILE_BOUNDS,
             &nz_transform.translation,
-            &NEUTRAL_ZONE_BOUNDS) {
-            return
+            &NEUTRAL_ZONE_BOUNDS,
+        ) {
+            return;
         }
     }
 
@@ -122,7 +120,8 @@ pub fn collide_yar(
         &yar_transform.translation,
         &YAR_BOUNDS,
         &dm_transform.translation,
-        &DESTROYER_MISSILE_BOUNDS) {
+        &DESTROYER_MISSILE_BOUNDS,
+    ) {
         death_event.send(YarDiedEvent);
         despawn_event.send(DespawnDestroyerMissileEvent);
     }
