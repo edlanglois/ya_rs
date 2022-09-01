@@ -15,6 +15,47 @@ pub struct YarRespawnEvent;
 
 pub struct YarPlugin;
 
+/// An input command to Yar
+#[derive(Debug, Default, Copy, Clone)]
+pub struct YarCommandEvent {
+    pub direction: Option<YarDirection>,
+    pub shoot: bool,
+}
+
+impl From<&Input<KeyCode>> for YarCommandEvent {
+    fn from(keys: &Input<KeyCode>) -> Self {
+        let mut dx: i8 = 0;
+        let mut dy: i8 = 0;
+        if keys.pressed(KeyCode::W) {
+            dy += 1;
+        }
+        if keys.pressed(KeyCode::S) {
+            dy -= 1;
+        }
+        if keys.pressed(KeyCode::A) {
+            dx -= 1;
+        }
+        if keys.pressed(KeyCode::D) {
+            dx += 1;
+        }
+        let direction = match (dx.signum(), dy.signum()) {
+            (1, 1) => Some(YarDirection::UpRight),
+            (1, 0) => Some(YarDirection::Right),
+            (1, -1) => Some(YarDirection::DownRight),
+            (-1, 1) => Some(YarDirection::UpLeft),
+            (-1, 0) => Some(YarDirection::Left),
+            (-1, -1) => Some(YarDirection::DownLeft),
+            (0, 1) => Some(YarDirection::Up),
+            (0, -1) => Some(YarDirection::Down),
+            _ => None,
+        };
+        Self {
+            direction,
+            shoot: keys.pressed(KeyCode::Space),
+        }
+    }
+}
+
 impl Plugin for YarPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<YarShootEvent>()
@@ -126,36 +167,12 @@ pub fn input(
         return;
     }
 
-    let mut dx: i8 = 0;
-    let mut dy: i8 = 0;
-    if keys.pressed(KeyCode::W) {
-        dy += 1;
-    }
-    if keys.pressed(KeyCode::S) {
-        dy -= 1;
-    }
-    if keys.pressed(KeyCode::A) {
-        dx -= 1;
-    }
-    if keys.pressed(KeyCode::D) {
-        dx += 1;
-    }
-    let direction = match (dx.signum(), dy.signum()) {
-        (1, 1) => Some(YarDirection::UpRight),
-        (1, 0) => Some(YarDirection::Right),
-        (1, -1) => Some(YarDirection::DownRight),
-        (-1, 1) => Some(YarDirection::UpLeft),
-        (-1, 0) => Some(YarDirection::Left),
-        (-1, -1) => Some(YarDirection::DownLeft),
-        (0, 1) => Some(YarDirection::Up),
-        (0, -1) => Some(YarDirection::Down),
-        _ => None,
-    };
+    let command: YarCommandEvent = keys.as_ref().into();
 
     let speed = 3.0;
 
     // Originally Transform but only the translation Vec3 is needed
-    let mut yar_delta = direction.map_or(Vec3::ZERO, Vec3::from);
+    let mut yar_delta = command.direction.map_or(Vec3::ZERO, Vec3::from);
     yar_delta.x *= speed;
     yar_delta.y *= speed;
 
@@ -186,11 +203,11 @@ pub fn input(
     }
 
     transform.translation += yar_delta;
-    if let Some(dir) = direction {
+    if let Some(dir) = command.direction {
         yar.direction = dir;
     }
 
-    if keys.pressed(KeyCode::Space) {
+    if command.shoot {
         shoot_event.send(YarShootEvent);
     }
 }
