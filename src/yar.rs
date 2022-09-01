@@ -155,7 +155,9 @@ pub fn input(
     let speed = 3.0;
 
     // Originally Transform but only the translation Vec3 is needed
-    let mut yar_delta = direction.map_or(Vec3::ZERO, |direction| speed * Vec3::from(direction));
+    let mut yar_delta = direction.map_or(Vec3::ZERO, Vec3::from);
+    yar_delta.x *= speed;
+    yar_delta.y *= speed;
 
     // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
     {
