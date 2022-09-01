@@ -22,6 +22,13 @@ pub struct YarCommandEvent {
     pub shoot: bool,
 }
 
+impl YarCommandEvent {
+    /// Whether this represents a do-nothing command.
+    pub fn is_noop(&self) -> bool {
+        self.direction.is_none() && !self.shoot
+    }
+}
+
 impl From<&Input<KeyCode>> for YarCommandEvent {
     fn from(keys: &Input<KeyCode>) -> Self {
         let mut dx: i8 = 0;
@@ -61,7 +68,9 @@ impl Plugin for YarPlugin {
         app.add_event::<YarShootEvent>()
             .add_event::<YarDiedEvent>()
             .add_event::<YarRespawnEvent>()
+            .add_event::<YarCommandEvent>()
             .add_startup_system(setup.after(crate::setup_sprites))
+            .add_system(keyboard_input_commands)
             .add_system(input)
             .add_system(animate)
             .add_system(collide_qotile)
@@ -152,8 +161,19 @@ pub fn spawn(mut commands: Commands, game_state: Res<crate::GameState>) {
         .insert(AnimationTimer(Timer::from_seconds(0.1, true)));
 }
 
-pub fn input(
+/// Translate keyboard inputs into `YarCommandEvent`
+pub fn keyboard_input_commands(
     keys: Res<Input<KeyCode>>,
+    mut yar_commands: EventWriter<YarCommandEvent>,
+) {
+    let command = YarCommandEvent::from(&*keys);
+    if !command.is_noop() {
+        yar_commands.send(command);
+    }
+}
+
+pub fn input(
+    mut yar_commands: EventReader<YarCommandEvent>,
     mut shoot_event: EventWriter<YarShootEvent>,
     mut query: Query<(&mut Transform, &mut Yar)>,
 ) {
@@ -163,52 +183,57 @@ pub fn input(
 
     let (mut transform, mut yar) = query.single_mut();
 
-    if matches!(yar.anim, YarAnim::Death) {
+    if yar.is_dead() {
         return;
     }
 
-    let command: YarCommandEvent = keys.as_ref().into();
-
     let speed = 3.0;
 
-    // Originally Transform but only the translation Vec3 is needed
-    let mut yar_delta = command.direction.map_or(Vec3::ZERO, Vec3::from);
-    yar_delta.x *= speed;
-    yar_delta.y *= speed;
+    // I'm not too sure what is appropriate for multiple input command events.
+    // Is this function always called once per frame?
+    // For regular keyboard inputs there should be <= one command event per frame.
+    // For recorded events it ideally will be one per frame, if somehow there are multiple per
+    // frame then Yar should do them all so that it stays in sync.
+    for command in yar_commands.iter() {
+        // Originally yar_delta was Transform, only the translation Vec3 is used.
+        let mut yar_delta = command.direction.map_or(Vec3::ZERO, Vec3::from);
+        yar_delta.x *= speed;
+        yar_delta.y *= speed;
 
-    // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
-    {
-        let x_pos = transform.translation.x + yar_delta.x;
+        // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
+        {
+            let x_pos = transform.translation.x + yar_delta.x;
 
-        let x_underflow = (x_pos - YAR_BOUNDS.x / 2.0) - (-SCREEN_SIZE.x / 2.0);
-        if x_underflow < 0.0 {
-            yar_delta.x -= x_underflow;
+            let x_underflow = (x_pos - YAR_BOUNDS.x / 2.0) - (-SCREEN_SIZE.x / 2.0);
+            if x_underflow < 0.0 {
+                yar_delta.x -= x_underflow;
+            }
+
+            let x_overflow = (x_pos + YAR_BOUNDS.x / 2.0) - (SCREEN_SIZE.x / 2.0);
+            if x_overflow > 0.0 {
+                yar_delta.x -= x_overflow;
+            }
         }
 
-        let x_overflow = (x_pos + YAR_BOUNDS.x / 2.0) - (SCREEN_SIZE.x / 2.0);
-        if x_overflow > 0.0 {
-            yar_delta.x -= x_overflow;
+        // If Yar's centerpoint moves offscreen in the vertical direction, wrap Yar to the other side.
+        {
+            let y_pos = transform.translation.y + yar_delta.y;
+
+            if y_pos < -SCREEN_SIZE.y / 2.0 {
+                yar_delta.y += SCREEN_SIZE.y;
+            } else if y_pos > SCREEN_SIZE.y / 2.0 {
+                yar_delta.y -= SCREEN_SIZE.y;
+            }
         }
-    }
 
-    // If Yar's centerpoint moves offscreen in the vertical direction, wrap Yar to the other side.
-    {
-        let y_pos = transform.translation.y + yar_delta.y;
-
-        if y_pos < -SCREEN_SIZE.y / 2.0 {
-            yar_delta.y += SCREEN_SIZE.y;
-        } else if y_pos > SCREEN_SIZE.y / 2.0 {
-            yar_delta.y -= SCREEN_SIZE.y;
+        transform.translation += yar_delta;
+        if let Some(dir) = command.direction {
+            yar.direction = dir;
         }
-    }
 
-    transform.translation += yar_delta;
-    if let Some(dir) = command.direction {
-        yar.direction = dir;
-    }
-
-    if command.shoot {
-        shoot_event.send(YarShootEvent);
+        if command.shoot {
+            shoot_event.send(YarShootEvent);
+        }
     }
 }
 
