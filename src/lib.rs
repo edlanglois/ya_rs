@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::math::const_vec2;
 use bevy::prelude::*;
 

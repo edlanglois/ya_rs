@@ -87,7 +87,7 @@ pub fn shoot(
                 ..default()
             },
             texture_atlas: texture_atlas_handle.clone(),
-            transform: transform.clone(),
+            transform: *transform,
             ..default()
         })
         .insert(Bullet {

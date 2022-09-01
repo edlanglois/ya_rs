@@ -2,8 +2,7 @@ use crate::qotile::{DespawnQotileEvent, Qotile, SwirlState, QOTILE_BOUNDS};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
 use crate::zorlon_cannon::SpawnZorlonCannonEvent;
-use crate::SCREEN_SCALE;
-use crate::SCREEN_SIZE;
+use crate::{SCREEN_SCALE, SCREEN_SIZE};
 use bevy::math::const_vec2;
 use bevy::prelude::*;
 
@@ -93,13 +92,13 @@ pub fn setup(commands: Commands, game_state: Res<crate::GameState>) {
 }
 
 pub fn spawn(mut commands: Commands, game_state: Res<crate::GameState>) {
-    let mut transform = Transform::from_scale(Vec3::splat(crate::SCREEN_SCALE));
+    let mut transform = Transform::from_scale(Vec3::splat(SCREEN_SCALE));
     transform.translation.x -= (SCREEN_SIZE.x / 2.0) - (YAR_BOUNDS.x * 2.0);
 
     commands
         .spawn_bundle(SpriteSheetBundle {
             texture_atlas: game_state.sprite_atlas.clone(),
-            transform: transform,
+            transform,
             ..default()
         })
         .insert(Yar::default())
@@ -159,6 +158,7 @@ pub fn input(
             direction = Some(YarDirection::Left);
         }
     } else {
+        #[allow(clippy::collapsible_else_if)]
         if yar_delta.translation.y > 0.0 {
             direction = Some(YarDirection::Up);
         } else if yar_delta.translation.y < 0.0 {
@@ -193,7 +193,7 @@ pub fn input(
     }
 
     transform.translation += yar_delta.translation;
-    if let Some(dir) = direction.clone() {
+    if let Some(dir) = direction {
         yar.direction = dir;
     }
 

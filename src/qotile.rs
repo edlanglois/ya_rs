@@ -94,7 +94,7 @@ fn spawn(
     commands
         .spawn_bundle(SpriteBundle {
             texture: asset_server.load("qotile.png"),
-            transform: transform,
+            transform,
             ..default()
         })
         .insert(SwirlTimer(Timer::from_seconds(swirl_delay(), false)))
@@ -180,7 +180,7 @@ fn timer(
                     .remove_bundle::<SpriteBundle>()
                     .insert_bundle(SpriteSheetBundle {
                         texture_atlas: game_state.sprite_atlas.clone(),
-                        transform: transform.clone(),
+                        transform: *transform,
                         sprite: TextureAtlasSprite {
                             index: 25,
                             ..default()

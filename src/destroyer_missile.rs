@@ -51,7 +51,7 @@ pub fn spawn(
     commands
         .spawn_bundle(SpriteBundle {
             texture: asset_server.load("destroyer_missile.png"),
-            transform: qotile_transform.clone(),
+            transform: *qotile_transform,
             ..default()
         })
         .insert(DestroyerMissile);

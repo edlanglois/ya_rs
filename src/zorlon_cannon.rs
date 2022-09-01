@@ -48,7 +48,7 @@ pub fn spawn(
 
     let (yar_transform, texture_atlas_handle) = yar_query.single();
 
-    let mut zorlon_transform = yar_transform.clone();
+    let mut zorlon_transform = *yar_transform;
     zorlon_transform.translation.x = -SCREEN_SIZE.x / 2.0;
 
     commands
@@ -58,7 +58,7 @@ pub fn spawn(
                 ..default()
             },
             texture_atlas: texture_atlas_handle.clone(),
-            transform: zorlon_transform.clone(),
+            transform: zorlon_transform,
             ..default()
         })
         .insert(ZorlonCannon { launched: false });
