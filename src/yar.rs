@@ -33,7 +33,7 @@ impl Plugin for YarPlugin {
 #[derive(Component, Deref, DerefMut)]
 pub struct AnimationTimer(pub Timer);
 
-#[derive(Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum YarDirection {
     Left,
     Right,
@@ -45,7 +45,22 @@ pub enum YarDirection {
     DownLeft,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+impl From<YarDirection> for Vec3 {
+    fn from(direction: YarDirection) -> Self {
+        match direction {
+            YarDirection::Left => Vec3::new(-1.0, 0.0, 1.0),
+            YarDirection::Right => Vec3::new(1.0, 0.0, 1.0),
+            YarDirection::Up => Vec3::new(0.0, 1.0, 1.0),
+            YarDirection::UpRight => Vec3::new(1.0, 1.0, 1.0),
+            YarDirection::UpLeft => Vec3::new(-1.0, 1.0, 1.0),
+            YarDirection::Down => Vec3::new(0.0, -1.0, 1.0),
+            YarDirection::DownRight => Vec3::new(1.0, -1.0, 1.0),
+            YarDirection::DownLeft => Vec3::new(-1.0, -1.0, 1.0),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum YarAnim {
     Fly,
     Death,
@@ -64,16 +79,7 @@ impl Yar {
     }
 
     pub fn direction_to_vector(&self) -> Vec3 {
-        match self.direction {
-            YarDirection::Left => Vec3::new(-1.0, 0.0, 1.0),
-            YarDirection::Right => Vec3::new(1.0, 0.0, 1.0),
-            YarDirection::Up => Vec3::new(0.0, 1.0, 1.0),
-            YarDirection::UpRight => Vec3::new(1.0, 1.0, 1.0),
-            YarDirection::UpLeft => Vec3::new(-1.0, 1.0, 1.0),
-            YarDirection::Down => Vec3::new(0.0, -1.0, 1.0),
-            YarDirection::DownRight => Vec3::new(1.0, -1.0, 1.0),
-            YarDirection::DownLeft => Vec3::new(-1.0, -1.0, 1.0),
-        }
+        self.direction.into()
     }
 }
 
@@ -120,79 +126,64 @@ pub fn input(
         return;
     }
 
-    let mut yar_delta = Transform::identity();
+    let mut dx: i8 = 0;
+    let mut dy: i8 = 0;
+    if keys.pressed(KeyCode::W) {
+        dy += 1;
+    }
+    if keys.pressed(KeyCode::S) {
+        dy -= 1;
+    }
+    if keys.pressed(KeyCode::A) {
+        dx -= 1;
+    }
+    if keys.pressed(KeyCode::D) {
+        dx += 1;
+    }
+    let direction = match (dx.signum(), dy.signum()) {
+        (1, 1) => Some(YarDirection::UpRight),
+        (1, 0) => Some(YarDirection::Right),
+        (1, -1) => Some(YarDirection::DownRight),
+        (-1, 1) => Some(YarDirection::UpLeft),
+        (-1, 0) => Some(YarDirection::Left),
+        (-1, -1) => Some(YarDirection::DownLeft),
+        (0, 1) => Some(YarDirection::Up),
+        (0, -1) => Some(YarDirection::Down),
+        _ => None,
+    };
 
     let speed = 3.0;
-    let mut direction: Option<YarDirection> = None;
 
-    if keys.pressed(KeyCode::W) {
-        yar_delta.translation.y += speed;
-    }
-
-    if keys.pressed(KeyCode::S) {
-        yar_delta.translation.y -= speed;
-    }
-
-    if keys.pressed(KeyCode::A) {
-        yar_delta.translation.x -= speed;
-    }
-
-    if keys.pressed(KeyCode::D) {
-        yar_delta.translation.x += speed;
-    }
-
-    if yar_delta.translation.x > 0.0 {
-        if yar_delta.translation.y > 0.0 {
-            direction = Some(YarDirection::UpRight);
-        } else if yar_delta.translation.y < 0.0 {
-            direction = Some(YarDirection::DownRight);
-        } else {
-            direction = Some(YarDirection::Right);
-        }
-    } else if yar_delta.translation.x < 0.0 {
-        if yar_delta.translation.y > 0.0 {
-            direction = Some(YarDirection::UpLeft);
-        } else if yar_delta.translation.y < 0.0 {
-            direction = Some(YarDirection::DownLeft);
-        } else {
-            direction = Some(YarDirection::Left);
-        }
-    } else {
-        #[allow(clippy::collapsible_else_if)]
-        if yar_delta.translation.y > 0.0 {
-            direction = Some(YarDirection::Up);
-        } else if yar_delta.translation.y < 0.0 {
-            direction = Some(YarDirection::Down);
-        }
-    }
+    // Originally Transform but only the translation Vec3 is needed
+    let mut yar_delta = direction.map_or(Vec3::ZERO, |direction| speed * Vec3::from(direction));
 
     // If Yar moves offscreen in the horizontal direction, correct the move to bound Yar.
     {
-        let x_pos = transform.translation.x + yar_delta.translation.x;
+        let x_pos = transform.translation.x + yar_delta.x;
 
         let x_underflow = (x_pos - YAR_BOUNDS.x / 2.0) - (-SCREEN_SIZE.x / 2.0);
         if x_underflow < 0.0 {
-            yar_delta.translation.x -= x_underflow;
+            yar_delta.x -= x_underflow;
         }
 
         let x_overflow = (x_pos + YAR_BOUNDS.x / 2.0) - (SCREEN_SIZE.x / 2.0);
         if x_overflow > 0.0 {
-            yar_delta.translation.x -= x_overflow;
+            yar_delta.x -= x_overflow;
         }
     }
 
     // If Yar's centerpoint moves offscreen in the vertical direction, wrap Yar to the other side.
     {
-        let y_pos = transform.translation.y + yar_delta.translation.y;
+        let y_pos = transform.translation.y + yar_delta.y;
 
         if y_pos < -SCREEN_SIZE.y / 2.0 {
-            yar_delta.translation.y += SCREEN_SIZE.y;
+            yar_delta.y += SCREEN_SIZE.y;
         } else if y_pos > SCREEN_SIZE.y / 2.0 {
-            yar_delta.translation.y -= SCREEN_SIZE.y;
+            yar_delta.y -= SCREEN_SIZE.y;
         }
     }
 
-    transform.translation += yar_delta.translation;
+    transform.translation += yar_delta;
     if let Some(dir) = direction {
         yar.direction = dir;
     }
