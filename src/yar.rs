@@ -16,6 +16,22 @@ pub struct YarRespawnEvent;
 
 pub struct YarPlugin;
 
+impl Plugin for YarPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<YarShootEvent>()
+            .add_event::<YarDiedEvent>()
+            .add_event::<YarRespawnEvent>()
+            .add_event::<YarCommandEvent>()
+            .add_startup_system(setup.after(crate::setup_sprites))
+            .add_system(input)
+            .add_system(animate)
+            .add_system(collide_qotile)
+            .add_system(collide_shield)
+            .add_system(death)
+            .add_system(respawn);
+    }
+}
+
 /// An input command to Yar
 #[derive(Debug, Default, Copy, Clone)]
 pub struct YarCommandEvent {
@@ -60,22 +76,6 @@ impl From<&Input<KeyCode>> for YarCommandEvent {
             direction,
             shoot: keys.pressed(KeyCode::Space),
         }
-    }
-}
-
-impl Plugin for YarPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<YarShootEvent>()
-            .add_event::<YarDiedEvent>()
-            .add_event::<YarRespawnEvent>()
-            .add_event::<YarCommandEvent>()
-            .add_startup_system(setup.after(crate::setup_sprites))
-            .add_system(input)
-            .add_system(animate)
-            .add_system(collide_qotile)
-            .add_system(collide_shield)
-            .add_system(death)
-            .add_system(respawn);
     }
 }
 
