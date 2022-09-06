@@ -4,7 +4,6 @@ use bevy::math::const_vec2;
 use bevy::prelude::*;
 
 pub struct SpawnShieldEvent;
-
 pub struct ShieldPlugin;
 
 impl Plugin for ShieldPlugin {
@@ -12,7 +11,6 @@ impl Plugin for ShieldPlugin {
         app.add_event::<SpawnShieldEvent>()
             .add_startup_system(setup)
             .add_system(spawn)
-            //.add_system(despawn)
             .add_system(monitor_health);
     }
 }
@@ -48,9 +46,18 @@ pub fn setup(mut spawn_event: EventWriter<SpawnShieldEvent>) {
     spawn_event.send(SpawnShieldEvent);
 }
 
-pub fn spawn(mut commands: Commands, mut spawn_event: EventReader<SpawnShieldEvent>) {
+pub fn spawn(
+    mut commands: Commands,
+    mut spawn_event: EventReader<SpawnShieldEvent>,
+    blocks_query: Query<Entity, With<ShieldBlock>>,
+) {
     if spawn_event.iter().next().is_none() {
         return;
+    }
+
+    // Remove any existing blocks
+    for e in blocks_query.iter() {
+        commands.entity(e).despawn()
     }
 
     let mut shield_origin = Transform::identity();

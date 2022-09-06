@@ -1,6 +1,6 @@
 use crate::control::ControlEvent;
 use crate::qotile::{DespawnQotileEvent, Qotile, SwirlState, QOTILE_BOUNDS};
-use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
+use crate::shield::{ShieldBlock, ShieldHealth, SpawnShieldEvent, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
 use crate::zorlon_cannon::{DespawnZorlonCannonEvent, SpawnZorlonCannonEvent};
 use crate::{SCREEN_SCALE, SCREEN_SIZE};
@@ -361,6 +361,7 @@ pub fn respawn(
     game_state: Res<crate::GameState>,
     mut respawn_event: EventReader<YarRespawnEvent>,
     mut spawn_cannon_event: EventWriter<SpawnZorlonCannonEvent>,
+    mut spawn_shield_event: EventWriter<SpawnShieldEvent>,
 ) {
     if respawn_event.iter().next().is_none() {
         return;
@@ -369,4 +370,5 @@ pub fn respawn(
     spawn(commands, game_state);
 
     spawn_cannon_event.send(SpawnZorlonCannonEvent);
+    spawn_shield_event.send(SpawnShieldEvent);
 }
