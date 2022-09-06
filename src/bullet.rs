@@ -2,7 +2,6 @@ use crate::neutral_zone::{NeutralZone, NEUTRAL_ZONE_BOUNDS};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
 use crate::yar::{Yar, YarDiedEvent, YarShootEvent, YAR_BOUNDS};
-use crate::zorlon_cannon::ZorlonCannon;
 use crate::SCREEN_SCALE;
 use bevy::math::const_vec2;
 use bevy::prelude::*;
