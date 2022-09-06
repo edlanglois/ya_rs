@@ -2,7 +2,7 @@ use crate::control::ControlEvent;
 use crate::qotile::{DespawnQotileEvent, Qotile, SwirlState, QOTILE_BOUNDS};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
-use crate::zorlon_cannon::SpawnZorlonCannonEvent;
+use crate::zorlon_cannon::{DespawnZorlonCannonEvent, SpawnZorlonCannonEvent};
 use crate::{SCREEN_SCALE, SCREEN_SIZE};
 use bevy::math::const_vec2;
 use bevy::prelude::*;
@@ -284,7 +284,7 @@ pub fn animate(
 }
 
 pub fn collide_qotile(
-    mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
+    // mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
     mut death_event: EventWriter<YarDiedEvent>,
     mut despawn_event: EventWriter<DespawnQotileEvent>,
     yar_query: Query<&Transform, (With<Yar>, Without<Qotile>)>,
@@ -304,7 +304,7 @@ pub fn collide_qotile(
         &QOTILE_BOUNDS,
     ) {
         if matches!(qotile.swirl_state, SwirlState::NotSwirl) {
-            spawn_event.send(SpawnZorlonCannonEvent);
+            // spawn_event.send(SpawnZorlonCannonEvent);
         } else {
             death_event.send(YarDiedEvent);
             despawn_event.send(DespawnQotileEvent);
@@ -313,7 +313,7 @@ pub fn collide_qotile(
 }
 
 pub fn collide_shield(
-    mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
+    // mut spawn_event: EventWriter<SpawnZorlonCannonEvent>,
     mut yar_query: Query<(&mut Transform, &Yar), Without<ShieldBlock>>,
     mut shield_query: Query<(&Transform, &mut ShieldHealth), With<ShieldBlock>>,
 ) {
@@ -335,15 +335,21 @@ pub fn collide_shield(
             knockback.z = 0.0;
             yar_transform.translation -= knockback * YAR_EAT_KNOCKBACK;
 
-            spawn_event.send(SpawnZorlonCannonEvent);
+            // spawn_event.send(SpawnZorlonCannonEvent);
         }
     }
 }
 
-pub fn death(mut death_event: EventReader<YarDiedEvent>, mut query: Query<&mut Yar>) {
+pub fn death(
+    mut death_event: EventReader<YarDiedEvent>,
+    mut despawn_cannon_event: EventWriter<DespawnZorlonCannonEvent>,
+    mut query: Query<&mut Yar>,
+) {
     if death_event.iter().next().is_none() || query.is_empty() {
         return;
     }
+
+    despawn_cannon_event.send(DespawnZorlonCannonEvent);
 
     let mut yar = query.single_mut();
     yar.anim = YarAnim::Death;
@@ -354,10 +360,13 @@ pub fn respawn(
     commands: Commands,
     game_state: Res<crate::GameState>,
     mut respawn_event: EventReader<YarRespawnEvent>,
+    mut spawn_cannon_event: EventWriter<SpawnZorlonCannonEvent>,
 ) {
     if respawn_event.iter().next().is_none() {
         return;
     }
 
     spawn(commands, game_state);
+
+    spawn_cannon_event.send(SpawnZorlonCannonEvent);
 }

@@ -48,19 +48,11 @@ pub fn despawn(
 pub fn shoot(
     mut commands: Commands,
     mut shoot_event: EventReader<YarShootEvent>,
-    yar_query: Query<
-        (&Transform, &Handle<TextureAtlas>, &Yar),
-        (Without<ZorlonCannon>, Without<ZorlonCannon>),
-    >,
-    zc_query: Query<Entity, (With<ZorlonCannon>, Without<Yar>, Without<Bullet>)>,
-    bullet_query: Query<&Bullet, (Without<Yar>, Without<ZorlonCannon>)>,
+    yar_query: Query<(&Transform, &Handle<TextureAtlas>, &Yar)>,
+    bullet_query: Query<&Bullet, Without<Yar>>,
     nz_query: Query<&Transform, With<NeutralZone>>,
 ) {
-    if shoot_event.iter().next().is_none()
-        || !zc_query.is_empty()
-        || yar_query.is_empty()
-        || !bullet_query.is_empty()
-    {
+    if shoot_event.iter().next().is_none() || yar_query.is_empty() || !bullet_query.is_empty() {
         return;
     }
 

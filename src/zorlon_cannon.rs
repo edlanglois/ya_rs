@@ -1,7 +1,8 @@
+use crate::control::ControlEvent;
 use crate::qotile::{Qotile, QotileDiedEvent, QOTILE_BOUNDS};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
-use crate::yar::{Yar, YarDiedEvent, YarShootEvent, YAR_BOUNDS};
+use crate::yar::{Yar, YarDiedEvent, YAR_BOUNDS};
 use crate::SCREEN_SCALE;
 use crate::SCREEN_SIZE;
 use bevy::math::const_vec2;
@@ -19,15 +20,50 @@ impl Plugin for ZorlonCannonPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnZorlonCannonEvent>()
             .add_event::<DespawnZorlonCannonEvent>()
+            .add_event::<CannonCommandEvent>()
             .add_system(spawn)
             .add_system(despawn)
-            .add_system(track)
-            .add_system(shoot)
+            // .add_system(track)
+            // .add_system(shoot)
+            .add_system(input)
             .add_system(fly)
             .add_system(leave_world)
             .add_system(collide_yar)
             .add_system(collide_qotile)
             .add_system(collide_shield);
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum CannonDirection {
+    Up,
+    Down,
+}
+
+/// An input command to the cannon
+#[derive(Debug, Default, Copy, Clone)]
+pub struct CannonCommandEvent {
+    pub direction: Option<CannonDirection>,
+    pub shoot: bool,
+}
+
+impl ControlEvent for CannonCommandEvent {
+    fn is_noop(&self) -> bool {
+        self.direction.is_none() && !self.shoot
+    }
+}
+
+impl From<&Input<KeyCode>> for CannonCommandEvent {
+    fn from(keys: &Input<KeyCode>) -> Self {
+        let direction = match (keys.pressed(KeyCode::W), keys.pressed(KeyCode::S)) {
+            (true, false) => Some(CannonDirection::Up),
+            (false, true) => Some(CannonDirection::Down),
+            _ => None,
+        };
+        Self {
+            direction,
+            shoot: keys.pressed(KeyCode::Space),
+        }
     }
 }
 
@@ -39,16 +75,14 @@ pub struct ZorlonCannon {
 pub fn spawn(
     mut commands: Commands,
     mut spawn_event: EventReader<SpawnZorlonCannonEvent>,
-    yar_query: Query<(&Transform, &Handle<TextureAtlas>), (With<Yar>, Without<ZorlonCannon>)>,
-    zc_query: Query<&Transform, (With<ZorlonCannon>, Without<Yar>)>,
+    game_state: Res<crate::GameState>,
+    zc_query: Query<&Transform, With<ZorlonCannon>>,
 ) {
-    if spawn_event.iter().next().is_none() || yar_query.is_empty() || !zc_query.is_empty() {
+    if spawn_event.iter().next().is_none() || !zc_query.is_empty() {
         return;
     }
 
-    let (yar_transform, texture_atlas_handle) = yar_query.single();
-
-    let mut zorlon_transform = *yar_transform;
+    let mut zorlon_transform = Transform::from_scale(Vec3::splat(SCREEN_SCALE));
     zorlon_transform.translation.x = -SCREEN_SIZE.x / 2.0;
 
     commands
@@ -57,7 +91,7 @@ pub fn spawn(
                 index: 23,
                 ..default()
             },
-            texture_atlas: texture_atlas_handle.clone(),
+            texture_atlas: game_state.sprite_atlas.clone(),
             transform: zorlon_transform,
             ..default()
         })
@@ -80,30 +114,33 @@ pub fn despawn(
     commands.entity(e).despawn();
 }
 
-pub fn track(
-    yar_query: Query<&Transform, (With<Yar>, Without<ZorlonCannon>)>,
-    mut zc_query: Query<(&mut Transform, &ZorlonCannon), Without<Yar>>,
+pub fn input(
+    mut cannon_commands: EventReader<CannonCommandEvent>,
+    mut query: Query<(&mut Transform, &mut ZorlonCannon)>,
 ) {
-    if yar_query.is_empty() || zc_query.is_empty() {
+    if query.is_empty() {
         return;
     }
 
-    let (mut zc_transform, zorlon_cannon) = zc_query.single_mut();
+    let (mut transform, mut zorlon_cannon) = query.single_mut();
     if zorlon_cannon.launched {
         return;
     }
 
-    let yar_transform = yar_query.single();
-    zc_transform.translation.y = yar_transform.translation.y;
-}
-
-pub fn shoot(mut shoot_event: EventReader<YarShootEvent>, mut zc_query: Query<&mut ZorlonCannon>) {
-    if shoot_event.iter().next().is_none() || zc_query.is_empty() {
-        return;
+    let speed = 3.0;
+    for command in cannon_commands.iter() {
+        if let Some(direction) = command.direction {
+            transform.translation.y += match direction {
+                CannonDirection::Up => speed,
+                CannonDirection::Down => -speed,
+            };
+        }
+        if command.shoot {
+            zorlon_cannon.launched = true;
+            // Don't allow more movement after shooting
+            break;
+        }
     }
-
-    let mut zorlon_cannon = zc_query.single_mut();
-    zorlon_cannon.launched = true;
 }
 
 pub fn fly(mut zc_query: Query<(&mut Transform, &ZorlonCannon)>) {
