@@ -8,5 +8,16 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-bevy = "0.7.0"
+bevy = { version = "0.7.0", features = ["dynamic"] }
 rand = "0.8.5"
+
+# Reduce compile time
+# https://bevyengine.org/learn/book/getting-started/setup/#compile-with-performance-optimizations
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
