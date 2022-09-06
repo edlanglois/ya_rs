@@ -1,3 +1,4 @@
+use crate::control::ControlEvent;
 use crate::qotile::{DespawnQotileEvent, Qotile, SwirlState, QOTILE_BOUNDS};
 use crate::shield::{ShieldBlock, ShieldHealth, SHIELD_BLOCK_SPRITE_SIZE};
 use crate::util;
@@ -22,9 +23,8 @@ pub struct YarCommandEvent {
     pub shoot: bool,
 }
 
-impl YarCommandEvent {
-    /// Whether this represents a do-nothing command.
-    pub fn is_noop(&self) -> bool {
+impl ControlEvent for YarCommandEvent {
+    fn is_noop(&self) -> bool {
         self.direction.is_none() && !self.shoot
     }
 }
@@ -70,7 +70,6 @@ impl Plugin for YarPlugin {
             .add_event::<YarRespawnEvent>()
             .add_event::<YarCommandEvent>()
             .add_startup_system(setup.after(crate::setup_sprites))
-            .add_system(keyboard_input_commands)
             .add_system(input)
             .add_system(animate)
             .add_system(collide_qotile)
@@ -159,17 +158,6 @@ pub fn spawn(mut commands: Commands, game_state: Res<crate::GameState>) {
         })
         .insert(Yar::default())
         .insert(AnimationTimer(Timer::from_seconds(0.1, true)));
-}
-
-/// Translate keyboard inputs into `YarCommandEvent`
-pub fn keyboard_input_commands(
-    keys: Res<Input<KeyCode>>,
-    mut yar_commands: EventWriter<YarCommandEvent>,
-) {
-    let command = YarCommandEvent::from(&*keys);
-    if !command.is_noop() {
-        yar_commands.send(command);
-    }
 }
 
 pub fn input(

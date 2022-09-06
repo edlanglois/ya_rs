@@ -4,6 +4,7 @@ use bevy::math::const_vec2;
 use bevy::prelude::*;
 
 mod bullet;
+mod control;
 mod destroyer_missile;
 mod neutral_zone;
 mod qotile;
@@ -58,11 +59,12 @@ pub fn run() {
         .init_resource::<GameState>()
         .add_plugins(DefaultPlugins)
         .add_plugin(yar::YarPlugin)
+        .add_plugin(control::ReplayControlPlugin)
         .add_plugin(bullet::BulletPlugin)
         .add_plugin(zorlon_cannon::ZorlonCannonPlugin)
         .add_plugin(destroyer_missile::DestroyerMissilePlugin)
         .add_plugin(qotile::QotilePlugin)
-        .add_plugin(neutral_zone::NeutralZonePlugin)
+        // .add_plugin(neutral_zone::NeutralZonePlugin)
         .add_plugin(shield::ShieldPlugin)
         .add_startup_system(setup_camera)
         .add_startup_system(setup_sprites)
