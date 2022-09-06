@@ -1,5 +1,6 @@
 //! Control system. Generates control events from user input.
 use crate::yar::{YarCommandEvent, YarRespawnEvent};
+use crate::zorlon_cannon::CannonCommandEvent;
 use bevy::prelude::*;
 use bevy::utils::Duration;
 use std::collections::VecDeque;
@@ -10,11 +11,13 @@ pub struct ReplayControlPlugin;
 
 impl Plugin for ReplayControlPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ControlSource::Player)
+        app.insert_resource(ControlTarget::Yar)
             .insert_resource(Record::<YarCommandEvent>::default())
+            .insert_resource(Record::<CannonCommandEvent>::default())
             .add_startup_system(init_record_write::<YarCommandEvent>)
+            .add_startup_system(init_record_read::<CannonCommandEvent>)
             .add_system(on_yar_respawn)
-            .add_system(control_commands::<YarCommandEvent>);
+            .add_system(commands);
     }
 }
 
@@ -25,33 +28,43 @@ where
     record.set_write_mode(&time)
 }
 
+pub fn init_record_read<E>(mut record: ResMut<Record<E>>, time: Res<Time>)
+where
+    E: Send + Sync + 'static,
+{
+    record.set_read_mode(&time)
+}
+
 pub fn on_yar_respawn(
     mut yar_respawn: EventReader<YarRespawnEvent>,
-    mut control_source: ResMut<ControlSource>,
-    mut record: ResMut<Record<YarCommandEvent>>,
+    mut control_target: ResMut<ControlTarget>,
+    mut yar_record: ResMut<Record<YarCommandEvent>>,
+    mut cannon_record: ResMut<Record<CannonCommandEvent>>,
     time: Res<Time>,
 ) {
     if yar_respawn.iter().next().is_none() {
         return;
     }
 
-    *control_source = match *control_source {
-        ControlSource::Player => {
-            record.set_read_mode(&time);
-            ControlSource::Replay
+    *control_target = match *control_target {
+        ControlTarget::Yar => {
+            yar_record.set_read_mode(&time);
+            cannon_record.set_write_mode(&time);
+            ControlTarget::Cannon
         }
-        ControlSource::Replay => {
-            record.set_write_mode(&time);
-            ControlSource::Player
+        ControlTarget::Cannon => {
+            yar_record.set_write_mode(&time);
+            cannon_record.set_read_mode(&time);
+            ControlTarget::Yar
         }
     };
 }
 
-/// Control event source.
+/// Which object the player is controlling
 #[derive(Debug, Copy, Clone)]
-pub enum ControlSource {
-    Player,
-    Replay,
+pub enum ControlTarget {
+    Yar,
+    Cannon,
 }
 
 /// Record of a time series of events.
@@ -95,28 +108,47 @@ pub trait ControlEvent: for<'a> From<&'a Input<KeyCode>> + Send + Sync + 'static
     fn is_noop(&self) -> bool;
 }
 
-/// Generate control command events from keys or recorded inputs.
-pub fn control_commands<E>(
-    control_source: Res<ControlSource>,
-    mut record: ResMut<Record<E>>,
+/// Generate control command events
+pub fn commands(
+    control_target: Res<ControlTarget>,
     keys: Res<Input<KeyCode>>,
-    mut commands: EventWriter<E>,
+    mut yar_record: ResMut<Record<YarCommandEvent>>,
+    mut cannon_record: ResMut<Record<CannonCommandEvent>>,
+    yar_commands: EventWriter<YarCommandEvent>,
+    cannon_commands: EventWriter<CannonCommandEvent>,
     time: Res<Time>,
+) {
+    match *control_target {
+        ControlTarget::Yar => {
+            target_commands(true, &mut yar_record, &keys, &time, yar_commands);
+            target_commands(false, &mut cannon_record, &keys, &time, cannon_commands);
+        }
+        ControlTarget::Cannon => {
+            target_commands(false, &mut yar_record, &keys, &time, yar_commands);
+            target_commands(true, &mut cannon_record, &keys, &time, cannon_commands);
+        }
+    }
+}
+
+/// Generae commands for a particular target.
+pub fn target_commands<E>(
+    live: bool,
+    record: &mut Record<E>,
+    keys: &Input<KeyCode>,
+    time: &Time,
+    mut commands: EventWriter<E>,
 ) where
     E: ControlEvent + Clone,
 {
-    match *control_source {
-        ControlSource::Player => {
-            let command = E::from(&keys);
-            if !command.is_noop() {
-                record.push(command.clone(), &time);
-                commands.send(command);
-            }
+    if live {
+        let command = E::from(keys);
+        if !command.is_noop() {
+            record.push(command.clone(), time);
+            commands.send(command);
         }
-        ControlSource::Replay => {
-            while let Some(command) = record.pop_next_before(&time) {
-                commands.send(command);
-            }
+    } else {
+        while let Some(command) = record.pop_next_before(time) {
+            commands.send(command);
         }
     }
 }
